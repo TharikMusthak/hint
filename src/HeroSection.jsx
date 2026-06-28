@@ -1,0 +1,1233 @@
+import { useRef, useEffect, useState } from "react";
+import * as THREE from "three";
+import FeatureCard from './components/FeatureCard';
+import Logo from './assets/Hint_logo.svg';
+import icon from './assets/Loader.svg';
+import { motion, useScroll, useTransform } from "framer-motion";
+
+const lerp = (a, b, t) => a + (b - a) * t;
+
+const C = {
+  emerald: "#A0DB21",
+  emeraldDim: "#A0DB21",
+  emeraldGlow: "#A0DB21",
+  bg: "#040C02",
+  loadingscreen :"#000000",
+  bgMid: "#050d1a",
+  text: "#f8fafc",
+  muted: "#d8d8d8",
+  glass: "rgba(8,16,30,0.6)",
+};
+
+/* ═══════════════════════════════════════════
+   WEBGL CANVAS
+   ═══════════════════════════════════════════ */
+function useScene(canvasRef) {
+  const stateRef = useRef({});
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000, 0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(0, 0, 8);
+
+    scene.fog = new THREE.FogExp2(0x030712, 0.04);
+
+    const ambient = new THREE.AmbientLight(0x0a1628, 2);
+    scene.add(ambient);
+
+    const pointA = new THREE.PointLight(0x10b981, 80, 30);
+    pointA.position.set(3, 4, 5);
+    scene.add(pointA);
+
+    const pointB = new THREE.PointLight(0x0ea5e9, 40, 20);
+    pointB.position.set(-4, -2, 3);
+    scene.add(pointB);
+
+    const rimLight = new THREE.PointLight(0x34d399, 20, 15);
+    rimLight.position.set(0, -5, -3);
+    scene.add(rimLight);
+
+    const chipGeo = new THREE.SphereGeometry(0.15, 16, 16);
+    const chipMat = new THREE.MeshPhysicalMaterial({
+      color: 0x0a1628, metalness: 0.9, roughness: 0.15,
+      emissive: 0x10b981, emissiveIntensity: 0.12, envMapIntensity: 1.2,
+    });
+    const chip = new THREE.Mesh(chipGeo, chipMat);
+    scene.add(chip);
+
+    const ringGeo = new THREE.TorusGeometry(1.35, 0.012, 8, 80);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.8 });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    scene.add(ring);
+
+    const ring2Geo = new THREE.TorusGeometry(1.55, 0.006, 8, 80);
+    const ring2Mat = new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.3 });
+    const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+    ring2.rotation.x = Math.PI / 2;
+    scene.add(ring2);
+
+    const traceGroup = new THREE.Group();
+    const traceMat = new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.6 });
+    const traceData = [
+      [[-0.7, 0.2, 0.12], [-0.3, 0.2, 0.12], [-0.3, -0.2, 0.12], [0, -0.2, 0.12]],
+      [[0.7, 0.4, 0.12], [0.2, 0.4, 0.12], [0.2, 0.1, 0.12]],
+      [[-0.5, -0.5, 0.12], [-0.5, -0.1, 0.12], [0.1, -0.1, 0.12]],
+      [[0.3, -0.5, 0.12], [0.3, -0.3, 0.12], [-0.1, -0.3, 0.12], [-0.1, 0.3, 0.12]],
+    ];
+    traceData.forEach(pts => {
+      const geo = new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(...p)));
+      traceGroup.add(new THREE.Line(geo, traceMat));
+    });
+    chip.add(traceGroup);
+
+    const latticeGroup = new THREE.Group();
+    const orbitalAngles = [0, 35, 70, 110, 145];
+    orbitalAngles.forEach((deg, i) => {
+      const radius = 2.5 + i * 0.15;
+      const pts = [];
+      for (let j = 0; j <= 64; j++) {
+        const a = (j / 64) * Math.PI * 2;
+        pts.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, 0));
+      }
+      const geo = new THREE.BufferGeometry().setFromPoints(pts);
+      const orb = new THREE.Line(geo, new THREE.LineBasicMaterial({
+        color: 0x10b981, transparent: true, opacity: 0.12 + (i * 0.04)
+      }));
+      orb.rotation.x = THREE.MathUtils.degToRad(deg);
+      orb.rotation.y = THREE.MathUtils.degToRad(deg * 0.5);
+      latticeGroup.add(orb);
+    });
+    scene.add(latticeGroup);
+
+    const nodeMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+    const nodeGeo = new THREE.SphereGeometry(0.045, 8, 8);
+    const nodes = [];
+    const nodeOrbitData = [
+      { radius: 2.6, speed: 0.4, phase: 0, tilt: 0 },
+      { radius: 2.9, speed: -0.3, phase: 1.2, tilt: Math.PI / 3 },
+      { radius: 3.2, speed: 0.25, phase: 2.4, tilt: Math.PI / 6 },
+      { radius: 2.4, speed: -0.5, phase: 3.6, tilt: Math.PI / 4 },
+      { radius: 3.0, speed: 0.35, phase: 4.8, tilt: Math.PI / 2.5 },
+      { radius: 2.7, speed: -0.2, phase: 0.5, tilt: Math.PI / 1.8 },
+    ];
+    nodeOrbitData.forEach(d => {
+      const n = new THREE.Mesh(nodeGeo, nodeMat.clone());
+      n.userData = d;
+      nodes.push(n);
+      scene.add(n);
+    });
+
+    const connLines = nodes.map(() => {
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(6);
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
+        color: 0x10b981, transparent: true, opacity: 0.2
+      }));
+      scene.add(line);
+      return { line, geo };
+    });
+
+    const PARTICLE_COUNT = 1800;
+    const pPositions = new Float32Array(PARTICLE_COUNT * 3);
+    const pSpeeds = new Float32Array(PARTICLE_COUNT);
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = 4 + Math.random() * 10;
+      pPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pPositions[i * 3 + 2] = r * Math.cos(phi);
+      pSpeeds[i] = 0.15 + Math.random() * 0.35;
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute("position", new THREE.BufferAttribute(pPositions, 3));
+    const pMat = new THREE.PointsMaterial({
+      color: 0x10b981, size: 0.035, sizeAttenuation: true,
+      transparent: true, opacity: 0.55,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const particles = new THREE.Points(pGeo, pMat);
+    scene.add(particles);
+
+    const hexGroup = new THREE.Group();
+    const hexShape = new THREE.Shape();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
+      if (i === 0) hexShape.moveTo(Math.cos(a), Math.sin(a));
+      else hexShape.lineTo(Math.cos(a), Math.sin(a));
+    }
+    hexShape.closePath();
+    [[-6,3,-4],[7,-2,-6],[-5,-5,-3],[8,5,-8],[0,7,-5],[-8,1,-7]].forEach(([x,y,z]) => {
+      const geo = new THREE.ShapeGeometry(hexShape);
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0x10b981, wireframe: true, transparent: true, opacity: 0.045
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      mesh.scale.setScalar(0.6 + Math.random() * 1.2);
+      hexGroup.add(mesh);
+    });
+    scene.add(hexGroup);
+
+    const mouse = { x: 0, y: 0, lerpX: 0, lerpY: 0 };
+    const onMouseMove = e => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    };
+    window.addEventListener("mousemove", onMouseMove);
+
+    let scrollY = 0;
+    const onScroll = () => { scrollY = window.scrollY; };
+    window.addEventListener("scroll", onScroll);
+
+    const onResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener("resize", onResize);
+
+    let raf, t = 0;
+    const animate = () => {
+      raf = requestAnimationFrame(animate);
+      t += 0.008;
+      mouse.lerpX = lerp(mouse.lerpX, mouse.x, 0.06);
+      mouse.lerpY = lerp(mouse.lerpY, mouse.y, 0.06);
+
+      const scrollFade = Math.min(scrollY / 600, 1);
+      camera.position.x = lerp(camera.position.x, mouse.lerpX * 1.2, 0.03);
+      camera.position.y = lerp(camera.position.y, mouse.lerpY * 0.8 - scrollY * 0.003, 0.03);
+      camera.lookAt(0, 0, 0);
+
+      chip.rotation.y = t * 0.18 + mouse.lerpX * 0.3;
+      chip.rotation.x = mouse.lerpY * 0.15 + Math.sin(t * 0.4) * 0.05;
+      ring.rotation.z = t * 0.25;
+      ring2.rotation.z = -t * 0.15;
+      ring2.rotation.y = t * 0.12;
+      latticeGroup.rotation.y = t * 0.08;
+      latticeGroup.rotation.x = t * 0.04;
+
+      nodes.forEach((node, i) => {
+        const d = node.userData;
+        const angle = t * d.speed + d.phase;
+        const x = Math.cos(angle) * d.radius;
+        const y = Math.sin(angle) * d.radius;
+        const quat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), d.tilt);
+        const pos = new THREE.Vector3(x, y, 0).applyQuaternion(quat);
+        node.position.copy(pos);
+        const posArr = connLines[i].geo.attributes.position.array;
+        posArr[0] = pos.x; posArr[1] = pos.y; posArr[2] = pos.z;
+        posArr[3] = 0; posArr[4] = 0; posArr[5] = 0;
+        connLines[i].geo.attributes.position.needsUpdate = true;
+        node.material.opacity = 0.5 + Math.sin(t * 2 + i) * 0.5;
+      });
+
+      const pPos = particles.geometry.attributes.position.array;
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        pPos[i * 3 + 1] -= pSpeeds[i] * 0.004;
+        if (pPos[i * 3 + 1] < -14) pPos[i * 3 + 1] = 14;
+      }
+      particles.geometry.attributes.position.needsUpdate = true;
+      particles.rotation.y = t * 0.012;
+
+      pointA.position.x = Math.sin(t * 0.5) * 5;
+      pointA.position.y = Math.cos(t * 0.3) * 3;
+      rimLight.intensity = 15 + Math.sin(t * 1.5) * 8;
+      hexGroup.rotation.y = t * 0.02;
+      hexGroup.rotation.z = t * 0.01;
+      scene.fog.density = 0.04 + scrollFade * 0.06;
+
+      renderer.render(scene, camera);
+    };
+    animate();
+    stateRef.current = { renderer, scene, camera };
+
+    return () => {
+      cancelAnimationFrame(raf);
+      renderer.dispose();
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
+  return stateRef;
+}
+
+/* ═══════════════════════════════════════════
+   MAGNETIC BUTTON
+   ═══════════════════════════════════════════ */
+function MagneticButton({ children, onClick, style = {} }) {
+  const ref = useRef();
+
+  const handleMove = e => {
+    const rect = ref.current.getBoundingClientRect();
+    const dx = (e.clientX - (rect.left + rect.width / 2)) * 0.35;
+    const dy = (e.clientY - (rect.top + rect.height / 2)) * 0.35;
+    ref.current.style.transform = `translate(${dx}px, ${dy}px) scale(1.04)`;
+  };
+
+  const handleLeave = () => {
+    ref.current.style.transform = "translate(0px, 0px) scale(1)";
+  };
+
+  return (
+    <button
+      ref={ref}
+      onClick={onClick}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      style={{
+        transition: "transform 0.25s cubic-bezier(0.23,1,0.32,1)",
+        cursor: "pointer",
+        border: "none",
+        ...style,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   SCROLL-REVEAL HOOK
+   ═══════════════════════════════════════════ */
+function useReveal() {
+  const ref = useRef();
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.12 }
+    );
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+
+  return [ref, visible];
+}
+
+/* ═══════════════════════════════════════════
+   STAT COUNTER
+   ═══════════════════════════════════════════ */
+function Counter({ target, suffix = "", duration = 1800 }) {
+  const [val, setVal] = useState(0);
+  const [ref, visible] = useReveal();
+
+  useEffect(() => {
+    if (!visible) return;
+    const start = performance.now();
+    const tick = now => {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 4);
+      setVal(Math.round(ease * target));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [visible, target, duration]);
+
+  return <span ref={ref}>{val}{suffix}</span>;
+}
+
+/* ═══════════════════════════════════════════
+   MINI CANVAS 3D
+   ═══════════════════════════════════════════ */
+function MiniCanvas3D({ type }) {
+  const ref = useRef();
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([e]) => setInView(e.isIntersecting),
+      { threshold: 0.1 }
+    );
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!ref.current || !inView) return;
+    const canvas = ref.current;
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    renderer.setClearColor(0, 0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+    camera.position.z = 5;
+
+    const light = new THREE.PointLight(0x10b981, 60, 20);
+    light.position.set(2, 3, 4);
+    scene.add(light, new THREE.AmbientLight(0x0a1628, 3));
+
+    let mesh, mesh2, raf, t = 0;
+
+    if (type === "verify") {
+      const geo = new THREE.TorusKnotGeometry(1.1, 0.3, 120, 16, 2, 3);
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: 0x064e3b, metalness: 0.95, roughness: 0.08,
+        emissive: 0x10b981, emissiveIntensity: 0.3,
+      });
+      mesh = new THREE.Mesh(geo, mat);
+      scene.add(mesh);
+      const wireGeo = new THREE.TorusKnotGeometry(1.12, 0.305, 80, 12, 2, 3);
+      mesh2 = new THREE.Mesh(wireGeo, new THREE.MeshBasicMaterial({
+        color: 0x34d399, wireframe: true, transparent: true, opacity: 0.12
+      }));
+      scene.add(mesh2);
+
+    } else if (type === "compute") {
+      mesh = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(1.5, 2),
+        new THREE.MeshPhysicalMaterial({
+          color: 0x050d1a, metalness: 0.8, roughness: 0.2,
+          emissive: 0x0ea5e9, emissiveIntensity: 0.2,
+        })
+      );
+      scene.add(mesh);
+      mesh2 = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(1.52, 2),
+        new THREE.MeshBasicMaterial({ color: 0x0ea5e9, wireframe: true, transparent: true, opacity: 0.35 })
+      );
+      scene.add(mesh2);
+
+    } else {
+      const group = new THREE.Group();
+      mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.6, 32, 32),
+        new THREE.MeshPhysicalMaterial({
+          color: 0x030712, metalness: 0.9, roughness: 0.1,
+          emissive: 0x10b981, emissiveIntensity: 0.4,
+        })
+      );
+      group.add(mesh);
+      [[1.8,0.5],[1.4,1.4],[0,1.9],[-1.4,1.2],[-1.8,0],[-1.3,-1.5],[0.5,-1.8]].forEach(([x,y]) => {
+        const s = new THREE.Mesh(
+          new THREE.SphereGeometry(0.12, 16, 16),
+          new THREE.MeshBasicMaterial({ color: 0x10b981 })
+        );
+        s.position.set(x, y, 0);
+        group.add(s);
+        group.add(new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(x,y,0)]),
+          new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.3 })
+        ));
+      });
+      scene.add(group);
+      mesh2 = group;
+    }
+
+    const animate = () => {
+      raf = requestAnimationFrame(animate);
+      t += 0.01;
+      if (mesh) { mesh.rotation.x = t * 0.4; mesh.rotation.y = t * 0.6; }
+      if (mesh2 && type !== "agent") { mesh2.rotation.x = t * 0.4; mesh2.rotation.y = t * 0.6; }
+      if (type === "agent") mesh2.rotation.z = t * 0.2;
+      light.position.x = Math.sin(t) * 3;
+      light.position.y = Math.cos(t * 0.7) * 3;
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    return () => { cancelAnimationFrame(raf); renderer.dispose(); };
+  }, [inView, type]);
+
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", display: "block" }} />;
+}
+
+/* ═══════════════════════════════════════════
+   GLITCH TEXT
+   ═══════════════════════════════════════════ */
+function GlitchText({ text, style = {} }) {
+  const [glitch, setGlitch] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGlitch(true);
+      setTimeout(() => setGlitch(false), 120);
+    }, 4000 + Math.random() * 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span style={{
+      display: "inline-block", position: "relative",
+      ...style,
+      ...(glitch ? { textShadow: `2px 0 ${C.emeraldGlow}, -2px 0 #0ea5e9` } : {}),
+      transition: "text-shadow 0.05s",
+    }}>
+      {text}
+    </span>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   TYPEWRITER
+   ═══════════════════════════════════════════ */
+function Typewriter({ strings, speed = 55 }) {
+  const [display, setDisplay] = useState("");
+  const [idx, setIdx] = useState(0);
+  const [charIdx, setCharIdx] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const current = strings[idx];
+    const delay = deleting ? speed * 0.4 : speed;
+    const timer = setTimeout(() => {
+      if (!deleting) {
+        if (charIdx < current.length) {
+          setDisplay(current.slice(0, charIdx + 1));
+          setCharIdx(c => c + 1);
+        } else {
+          setTimeout(() => setDeleting(true), 1800);
+        }
+      } else {
+        if (charIdx > 0) {
+          setDisplay(current.slice(0, charIdx - 1));
+          setCharIdx(c => c - 1);
+        } else {
+          setDeleting(false);
+          setIdx(i => (i + 1) % strings.length);
+        }
+      }
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [charIdx, deleting, idx, strings, speed]);
+
+  return (
+    <span>
+      {display}
+      <span style={{
+        display: "inline-block", width: "2px", height: "1em",
+        background: C.emerald, marginLeft: "2px", verticalAlign: "middle",
+        animation: "blink 0.9s step-end infinite",
+      }} />
+    </span>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   LIQUID GLASS PANEL — reusable wrapper
+   ═══════════════════════════════════════════ */
+function GlassPanel({ children, height = "420px", accentColor = "rgba(16,185,129,0.04)", style = {} }) {
+  return (
+    <div style={{
+      height,
+      borderRadius: "20px",
+      overflow: "hidden",
+      position: "relative",
+      background: "rgba(255,255,255,0.05)",
+      backdropFilter: "blur(4px) saturate(160%) brightness(1.04)",
+      WebkitBackdropFilter: "blur(4px) saturate(160%) brightness(1.04)",
+      border: "1px solid rgba(255,255,255,0.14)",
+      boxShadow: `
+        inset 0 1.5px 0 rgba(255,255,255,0.18),
+        inset 0 -1px 0 rgba(0,0,0,0.12),
+        inset 1px 0 0 rgba(255,255,255,0.06),
+        0 8px 32px rgba(0,0,0,0.35),
+        0 2px 8px rgba(0,0,0,0.2)
+      `,
+      ...style,
+    }}>
+      {/* Top specular sheen */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: "40%",
+        pointerEvents: "none", zIndex: 2,
+        background: "linear-gradient(180deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 60%, transparent 100%)",
+        borderRadius: "20px 20px 0 0",
+      }} />
+      {/* Bottom refraction tint */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: "30%",
+        pointerEvents: "none", zIndex: 2,
+        background: `linear-gradient(0deg, ${accentColor} 0%, transparent 100%)`,
+        borderRadius: "0 0 20px 20px",
+      }} />
+      {children}
+    </div>
+  );
+}
+
+
+export default function App() {
+  const canvasRef = useRef();
+  useScene(canvasRef);
+
+  
+  const { scrollY } = useScroll();
+
+ const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [scrollValue, setScrollValue] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [progress, setProgress] = useState(0);
+   useEffect(() => {
+    const totalTime = 500; 
+    
+    
+    const interval = setInterval(() => {
+      setProgress(prev => (prev < 100 ? prev + 1 : 100));
+    }, totalTime / 100);
+
+    
+    const finishTimer = setTimeout(() => setLoaded(true), totalTime);
+   
+    
+    const onScroll = () => setScrollValue(window.scrollY);
+    window.addEventListener("scroll", onScroll);
+
+    return () => { 
+      clearInterval(interval); 
+      clearTimeout(finishTimer); 
+      window.removeEventListener("scroll", onScroll); 
+    };
+  }, []);
+
+  useEffect(() => {
+  const handleMouseMove = (e) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
+  };
+  window.addEventListener("mousemove", handleMouseMove);
+  return () => window.removeEventListener("mousemove", handleMouseMove);
+}, []);
+
+  // FIX 3: all useTransform calls at top level (Rules of Hooks)
+  const navWidth   = useTransform(scrollY, [0, 80, 100], ["100%", "100%", "600px"]);
+  const navRadius  = useTransform(scrollY, [0, 80, 100], ["0px", "0px", "100px"]);
+  const navTop     = useTransform(scrollY, [0, 80, 100], ["0px", "0px", "20px"]);
+  const navPadding = useTransform(scrollY, [0, 80, 100], ["0 clamp(20px,5vw,64px)", "0 clamp(20px,5vw,64px)", "10px 20px"]);
+  // FIX 4: scroll indicator opacity — also top level
+  const scrollIndicatorOpacity = useTransform(scrollY, [0, 200], [1, 0]);
+
+  const navScrolled = scrollValue > 40;
+
+  return (
+    <div style={{
+      background: C.bg,
+      minHeight: "100vh",
+      color: C.text,
+      fontFamily: "'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif",
+      overflowX: "hidden",
+    }}>
+      <motion.div
+        className="mouse-glow"
+        animate={{ x: mousePos.x, y: mousePos.y }}
+        transition={{ type: "spring", damping: 20, stiffness: 500, mass: 0.10 }}
+      />
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        *, *::before, *::after { box-sizing: border-box; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes fade-up {
+          from { opacity: 0; transform: translateY(40px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes glow-pulse {
+          0%,100% { box-shadow: 0 0 20px rgba(160,219,33,0.3); }
+          50%      { box-shadow: 0 0 40px rgba(160,219,33,0.6), 0 0 80px rgba(160,219,33,0.2); }
+        }
+        @keyframes loader-expand { from { width: 0; } to { width: 100%; } }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #040C02; }
+        ::-webkit-scrollbar-thumb { background: #A0DB21; border-radius: 4px; }
+        .nav-link {
+          color: ${C.muted};
+          text-decoration: none;
+          font-size: 13px;
+          letter-spacing: 0.02em;
+          transition: color 0.2s;
+          cursor: pointer;
+        }
+        .nav-link:hover { color: ${C.text}; }
+        .section-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 14px;
+          background: rgba(160,219,33,0.08);
+          border: 1px solid rgba(160,219,33,0.25);
+          border-radius: 100px;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: ${C.emerald};
+          margin-bottom: 24px;
+        }
+        .gradient-text {
+          background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 50%, ${C.emerald} 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        .grid-3 {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+        }
+        @media (max-width: 900px) { .grid-3 { grid-template-columns: 1fr; } }
+        .hero-title {
+          font-size: clamp(52px, 8vw, 96px);
+          font-weight: 800;
+          line-height: 1.0;
+          letter-spacing: -0.04em;
+          margin: 0 0 28px;
+        }
+        .stat-number {
+          font-size: clamp(40px, 6vw, 72px);
+          font-weight: 800;
+          letter-spacing: -0.04em;
+          color: ${C.emerald};
+          font-variant-numeric: tabular-nums;
+        }
+        .mouse-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none; 
+  z-index: 9999;
+  
+ 
+  transform: translate(-50%, -50%); 
+  
+  
+  will-change: transform; 
+  filter: blur(40px);
+}
+      `}</style>
+
+      {/* Loading screen */}
+      {!loaded && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9999,
+          background: C.loadingscreen, display: "flex",
+          flexDirection: "column", alignItems: "center", justifyContent: "center",
+          gap: "24px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", marginLeft: "16px", flexShrink: 0 }}>
+          <img src={icon} alt="HINT" style={{ width: "100px", height: "auto" }} />
+        </div>
+          <div style={{ width: "200px", height: "1px", background: "rgba(7, 10, 1, 0.2)", overflow: "hidden", borderRadius: "2px" }}>
+            <div style={{ height: "100%", background: C.emerald, width: `${progress}%` }} />
+          </div>
+
+          {/* <div style={{ fontSize: "12px", color: C.muted, letterSpacing: "0.1em" }}>
+            INITIALIZING VERIFIABLE COMPUTE
+          </div> */}
+        </div>
+      )}
+
+      {/* WebGL Canvas */}
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: "fixed", top: 0, left: 0,
+          width: "100vw", height: "100vh",
+          zIndex: 0, pointerEvents: "none",
+          opacity: loaded ? 1 : 0, transition: "opacity 1s",
+        }}
+      />
+
+      {/* Radial gradient overlay */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none",
+        background: "radial-gradient(ellipse 60% 50% at 50% 50%, transparent 0%, rgba(4,12,2,0.4) 100%)",
+      }} />
+
+      {/* ── NAVBAR */}
+      {/* FIX 5: removed x:"-50%" (not valid MotionValue shorthand in all versions).
+                Use left+transform instead, or marginLeft auto trick */}
+      <motion.nav
+        style={{
+          position: "fixed",
+          top: navTop,
+          left: "50%",
+          x: "-50%",
+          zIndex: 100,
+          width: navWidth,
+          padding: navPadding,
+          borderRadius: navRadius,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: "rgba(4, 12, 2, 0.75)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          height: "64px",
+          border: "1px solid rgba(160, 219, 33, 0.2)",
+          overflow: "hidden",
+          boxShadow: "0 4px 30px rgba(0,0,0,0.5)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", marginLeft: "16px", flexShrink: 0 }}>
+          <img src={Logo} alt="HINT" style={{ width: "100px", height: "auto" }} />
+        </div>
+
+        {/* FIX 6: animate prop needs plain values, not MotionValues */}
+        <motion.div
+          animate={{ opacity: navScrolled ? 0 : 1 }}
+          transition={{ duration: 0.2 }}
+          style={{ display: "flex", gap: "24px", alignItems: "center", whiteSpace: "nowrap" }}
+        >
+          {["Overview", "Technology", "Testimonies", "Resources"].map(item => (
+            <span key={item} className="nav-link">{item}</span>
+          ))}
+        </motion.div>
+        
+        <div style={{ marginRight: "16px", flexShrink: 0 }}>
+          <MagneticButton style={{
+            background: "linear-gradient(135deg, #B3FF10 0%, #A0DB21 100%)",
+            color: "#040C02",
+            padding: "10px 22px",
+            borderRadius: "100px",
+            fontSize: "13px",
+            fontWeight: 700,
+            letterSpacing: "0.02em",
+            boxShadow: "0 0 20px rgba(160,219,33,0.35)",
+          }}>
+            Get Started
+          </MagneticButton>
+        </div>
+      </motion.nav>
+
+      {/* ══ SECTION 1 — HERO ══ */}
+      <section style={{
+        position: "relative", zIndex: 2,
+        minHeight: "100vh",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        textAlign: "center",
+        padding: "140px clamp(20px,6vw,80px) 80px",
+      }}>
+        {/* <div style={{
+          display: "inline-flex", alignItems: "center", gap: "8px",
+          padding: "6px 16px",
+          background: "rgba(160,219,33,0.06)",
+          border: "1px solid rgba(160,219,33,0.2)",
+          borderRadius: "100px",
+          fontSize: "11px", fontWeight: 600, letterSpacing: "0.12em",
+          textTransform: "uppercase", color: C.emerald,
+          marginBottom: "40px",
+          animation: loaded ? "fade-up 0.8s 0.4s both" : "none",
+        }}>
+          <span style={{
+            width: "6px", height: "6px", borderRadius: "50%",
+            background: C.emerald, animation: "glow-pulse 2s infinite",
+          }} />
+          Now in Public Beta
+        </div> */}
+
+        <h1 className="hero-title" style={{ animation: loaded ? "fade-up 0.9s 0.55s both" : "none" }}>
+          <span className="gradient-text">Verify</span>{" "}
+          <span style={{ color: C.text }}>to</span>
+          <br />
+          <GlitchText text="Trust AI" style={{ color: C.text }} />
+        </h1>
+
+        <p style={{
+          fontSize: "clamp(16px,2.5vw,22px)",
+          color: C.muted, fontWeight: 400,
+          lineHeight: 1.6, maxWidth: "620px",
+          marginBottom: "48px",
+          animation: loaded ? "fade-up 0.9s 0.7s both" : "none",
+        }}>
+          <Typewriter strings={[
+            "Cryptographic proof for every AI inference.",
+            "Tamper-evident logs for agentic pipelines.",
+            "Compliance-ready audits in milliseconds.",
+            "Zero-trust compute — verified end-to-end.",
+          ]} />
+        </p>
+
+        <div style={{
+          display: "flex", gap: "16px", flexWrap: "wrap",
+          justifyContent: "flex-start",
+          alignSelf: "flex-start",
+          animation: loaded ? "fade-up 0.9s 0.85s both" : "none",
+          marginTop:"115px"
+        }}>
+          <MagneticButton style={{
+            background: "linear-gradient(135deg, #B3FF10 0%, #A0DB21 100%)",
+            color: "#040C02",
+            padding: "15px 36px",
+            borderRadius: "100px",
+            fontSize: "15px", fontWeight: 700,
+            letterSpacing: "0.01em",
+            boxShadow: "0 0 40px rgba(179,255,16,0.4), 0 0 80px rgba(160,219,33,0.15)",
+          }}>
+            Start Verifying Free →
+          </MagneticButton>
+          <MagneticButton style={{
+            background: "transparent",
+            color: C.text,
+            padding: "15px 36px",
+            borderRadius: "100px",
+            fontSize: "15px", fontWeight: 600,
+            border: "1px solid rgba(248,250,252,0.15)",
+            backdropFilter: "blur(8px)",
+          }}>
+            Watch the Demo
+          </MagneticButton>
+        </div>
+
+        {/* FIX 7: scroll indicator — MotionValue used correctly via style prop */}
+        <motion.div style={{
+          position: "absolute", bottom: "40px", left: "50%", transform: "translateX(-50%)",
+          display: "flex", flexDirection: "column",
+          alignItems: "center", gap: "8px",
+          opacity: scrollIndicatorOpacity,
+        }}>
+          <span style={{ fontSize: "10px", letterSpacing: "0.15em", color: C.muted }}>SCROLL</span>
+          <div style={{
+            width: "1px", height: "40px",
+            background: `linear-gradient(${C.emerald}, transparent)`,
+            animation: "float 1.5s ease-in-out infinite",
+          }} />
+        </motion.div>
+      </section>
+
+      {/* ══ SECTION 2 — STATS ══ */}
+      <section style={{
+        position: "relative", zIndex: 2,
+        padding: "80px clamp(20px,6vw,80px)",
+        maxWidth: "1200px", margin: "0 auto",
+      }}>
+        <div style={{
+          height: "1px",
+          background: "linear-gradient(90deg, transparent, rgba(160,219,33,0.3), transparent)",
+          marginBottom: "80px",
+        }} />
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "40px", textAlign: "center",
+        }}>
+          {/* FIX 8: can't call hooks (useReveal) inside .map() — inline it via a sub-component */}
+          {[
+            { val: 99, suffix: ".99%", label: "Uptime SLA" },
+            { val: 14, suffix: "ms",   label: "Avg proof latency" },
+            { val: 2,  suffix: "B+",   label: "Inferences verified" },
+            { val: 500,suffix: "+",    label: "Enterprise customers" },
+          ].map((s, i) => <StatItem key={i} {...s} index={i} />)}
+        </div>
+      </section>
+
+      {/* ══ SECTION 3 — TECHNOLOGY ══ */}
+      <section style={{
+        position: "relative", zIndex: 2,
+        padding: "80px clamp(20px,6vw,80px)",
+        maxWidth: "1200px", margin: "40px auto",
+        background: "rgba(4,12,2,0.2)",
+        backdropFilter: "blur(30px) saturate(180%)",
+        WebkitBackdropFilter: "blur(0px) saturate(180%)",
+        borderRadius: "32px",
+        border: "1px solid rgba(255,255,255,0.05)",
+      }}>
+        <div style={{
+          display: "grid", gridTemplateColumns: "1fr 1fr",
+          gap: "80px", alignItems: "center",
+        }}>
+          <div>
+            <div className="section-eyebrow">
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.emerald }} />
+              Core Technology
+            </div>
+            <h2 style={{
+              fontSize: "clamp(36px,4.5vw,56px)", fontWeight: 800,
+              letterSpacing: "-0.04em", lineHeight: 1.05, margin: "0 0 24px",
+            }}>
+              <span className="gradient-text">Cryptographic</span><br />proof at<br />inference time
+            </h2>
+            <p style={{ color: C.muted, fontSize: "16px", lineHeight: 1.75, margin: "0 0 32px" }}>
+              Every AI call produces a tamper-evident receipt. Zero-knowledge proofs bind your
+              model version, inputs, outputs, and timestamps into a verifiable chain —
+              without exposing proprietary data.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {[
+                "ZK-proof per inference in under 14ms",
+                "Hardware attestation via TEE enclaves",
+                "Immutable audit log — SOC 2 & EU AI Act ready",
+              ].map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                  <div style={{
+                    width: "20px", height: "20px", borderRadius: "50%",
+                    background: "rgba(160,219,33,0.15)",
+                    border: "1px solid rgba(160,219,33,0.4)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0, marginTop: "2px",
+                    fontSize: "10px", color: C.emerald,
+                  }}>✓</div>
+                  <span style={{ color: C.text, fontSize: "15px", lineHeight: 1.5 }}>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Liquid glass 3D panel */}
+          <GlassPanel height="420px">
+            <MiniCanvas3D type="verify" />
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(160,219,33,0.015) 2px, rgba(160,219,33,0.015) 4px)",
+              pointerEvents: "none",
+            }} />
+            <div style={{ position: "absolute", top: "16px", left: "16px", fontSize: "10px", fontFamily: "monospace", color: "rgba(160,219,33,0.6)", letterSpacing: "0.08em" }}>
+              ZK-PROOF ENGINE v2.4.1
+            </div>
+            <div style={{ position: "absolute", bottom: "16px", right: "16px", fontSize: "10px", fontFamily: "monospace", color: "rgba(160,219,33,0.4)", letterSpacing: "0.08em" }}>
+              ◉ LIVE
+            </div>
+          </GlassPanel>
+        </div>
+      </section>
+
+      {/* ══ SECTION 4 — FEATURES GRID ══ */}
+      <section style={{
+        position: "relative", zIndex: 2,
+        padding: "80px clamp(20px,6vw,80px)",
+        maxWidth: "1200px", margin: "0 auto",
+      }}>
+        <div style={{ textAlign: "center", marginBottom: "64px" }}>
+          <div className="section-eyebrow" style={{ margin: "0 auto 24px" }}>
+            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.emerald }} />
+            Full Stack Trust
+          </div>
+          <h2 style={{ fontSize: "clamp(32px,4vw,52px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.1, margin: 0 }}>
+            Everything AI pipelines<br />
+            <span className="gradient-text">need to be trustworthy</span>
+          </h2>
+        </div>
+        <div className="grid-3">
+          <FeatureCard icon="🔐" title="Zero-Knowledge Proofs"  body="Prove computation happened correctly without revealing model weights, user data, or business logic." delay={0} />
+          <FeatureCard icon="⚡" title="Sub-20ms Latency"       body="Hardware-accelerated proof generation runs in your existing inference stack with negligible overhead."  delay={100} />
+          <FeatureCard icon="🌐" title="Agentic AI Ready"       body="Verify multi-step agent chains, tool calls, and RAG retrievals — every hop attested and logged."         delay={200} />
+          <FeatureCard icon="📋" title="Compliance Autopilot"   body="Auto-generated audit trails for EU AI Act, SOC 2, HIPAA, and enterprise governance requirements."      delay={300} />
+          <FeatureCard icon="🛡️" title="TEE Enclaves"           body="Trusted Execution Environments guarantee your model runs in a hardware-isolated, attestable context."   delay={400} />
+          <FeatureCard icon="🔗" title="Chain of Custody"       body="Immutable ledger from training checkpoint to user output. Trace any decision back to its origin."       delay={500} />
+        </div>
+      </section>
+
+      {/* ══ SECTION 5 — COMPUTE + AGENT ══ */}
+      <section style={{
+        position: "relative", zIndex: 2,
+        padding: "80px clamp(20px,6vw,80px)",
+        maxWidth: "1200px", margin: "0 auto",
+      }}>
+        {/* Verifiable Compute */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center", marginBottom: "120px" }}>
+          <GlassPanel height="400px" accentColor="rgba(14,165,233,0.04)">
+            <MiniCanvas3D type="compute" />
+            <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(14,165,233,0.012) 2px, rgba(14,165,233,0.012) 4px)", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", top: "16px", left: "16px", fontSize: "10px", fontFamily: "monospace", color: "rgba(14,165,233,0.6)", letterSpacing: "0.08em" }}>
+              VERIFIABLE COMPUTE LAYER
+            </div>
+          </GlassPanel>
+          <div>
+            <div className="section-eyebrow">
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#0ea5e9" }} />
+              Verifiable Compute
+            </div>
+            <h2 style={{ fontSize: "clamp(32px,4vw,48px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.1, margin: "0 0 24px" }}>
+              The infrastructure<br />layer AI was missing
+            </h2>
+            <p style={{ color: C.muted, fontSize: "15px", lineHeight: 1.75 }}>
+              HINT sits between your model provider and your application.
+              Every inference is routed through our attestation layer —
+              producing a cryptographic receipt in real-time, with zero changes to your existing code.
+            </p>
+          </div>
+        </div>
+
+        {/* Agentic */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }}>
+          <div>
+            <div className="section-eyebrow">
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.emerald }} />
+              Agentic AI Era
+            </div>
+            <h2 style={{ fontSize: "clamp(32px,4vw,48px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.1, margin: "0 0 24px" }}>
+              Trust your agents.<br />Know what they did.
+            </h2>
+            <p style={{ color: C.muted, fontSize: "15px", lineHeight: 1.75 }}>
+              As AI agents take autonomous actions — browsing, writing code, executing
+              transactions — HINT provides the audit backbone. Every tool call,
+              every reasoning step, cryptographically sealed.
+            </p>
+            <MagneticButton style={{
+              marginTop: "28px", background: "transparent", color: C.emerald,
+              padding: "12px 28px", borderRadius: "100px", fontSize: "14px", fontWeight: 600,
+              border: `1px solid ${C.emerald}`, letterSpacing: "0.02em",
+            }}>
+              Explore Agentic Docs →
+            </MagneticButton>
+          </div>
+          <GlassPanel height="400px">
+            <MiniCanvas3D type="agent" />
+            <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(160,219,33,0.012) 2px, rgba(160,219,33,0.012) 4px)", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", top: "16px", left: "16px", fontSize: "10px", fontFamily: "monospace", color: "rgba(160,219,33,0.6)", letterSpacing: "0.08em" }}>
+              AGENT NETWORK GRAPH
+            </div>
+          </GlassPanel>
+        </div>
+      </section>
+
+      {/* ══ SECTION 6 — TESTIMONIALS ══ */}
+      <section style={{
+        position: "relative", zIndex: 2,
+        padding: "80px clamp(20px,6vw,80px)",
+        maxWidth: "1200px", margin: "0 auto",
+      }}>
+        <div style={{ textAlign: "center", marginBottom: "64px" }}>
+          <div className="section-eyebrow" style={{ margin: "0 auto 24px" }}>
+            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.emerald }} />
+            Testimonies
+          </div>
+          <h2 style={{ fontSize: "clamp(32px,4vw,52px)", fontWeight: 800, letterSpacing: "-0.04em" }}>
+            Trusted by builders
+          </h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px" }}>
+          {/* FIX 9: same hook-in-map issue — use a sub-component */}
+          {[
+            { quote: "HINT is the primitive the AI industry has been missing. We now have a complete audit trail for every inference — regulators love it.", name: "Priya Nakamura", role: "CTO, Meridian Health AI", avatar: "PN" },
+            { quote: "We ship agentic products to financial institutions. Without HINT's attestation layer, we couldn't have closed our enterprise contracts.", name: "Marcus Osei", role: "CEO, Arbor Finance", avatar: "MO" },
+            { quote: "Integrating HINT took two hours. The ROI on avoided compliance work was immediate — it paid for a year in the first month.", name: "Yuki Tanaka", role: "Head of Infra, Nova Labs", avatar: "YT" },
+          ].map((t, i) => <TestimonialCard key={i} {...t} index={i} />)}
+        </div>
+      </section>
+
+      {/* ══ SECTION 7 — CTA ══ */}
+      <section style={{
+        position: "relative", zIndex: 2,
+        padding: "120px clamp(20px,6vw,80px) 160px",
+        textAlign: "center",
+        maxWidth: "900px", margin: "0 auto",
+      }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: -1, background: "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(160,219,33,0.07) 0%, transparent 70%)" }} />
+        <div className="section-eyebrow" style={{ margin: "0 auto 32px" }}>
+          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.emerald }} />
+          Get Started Today
+        </div>
+        <h2 style={{ fontSize: "clamp(40px,6vw,72px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.05, margin: "0 0 24px" }}>
+          <span className="gradient-text">Verifiable AI</span><br />starts here.
+        </h2>
+        <p style={{ color: C.muted, fontSize: "18px", lineHeight: 1.7, maxWidth: "520px", margin: "0 auto 48px" }}>
+          Join 500+ enterprises that already ship AI products with cryptographic auditability built in.
+        </p>
+        <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+          <MagneticButton style={{
+            background: "linear-gradient(135deg, #B3FF10 0%, #A0DB21 100%)",
+            color: "#040C02", padding: "18px 44px", borderRadius: "100px",
+            fontSize: "16px", fontWeight: 700,
+            boxShadow: "0 0 60px rgba(160,219,33,0.4), 0 0 120px rgba(160,219,33,0.15)",
+          }}>
+            Request Early Access
+          </MagneticButton>
+          <MagneticButton style={{
+            background: "transparent", color: C.text,
+            padding: "18px 44px", borderRadius: "100px",
+            fontSize: "16px", fontWeight: 600,
+            border: "1px solid rgba(248,250,252,0.15)",
+          }}>
+            View Documentation
+          </MagneticButton>
+        </div>
+      </section>
+
+      {/* ── FOOTER */}
+      <footer style={{
+        position: "relative", zIndex: 2,
+        borderTop: "1px solid rgba(160,219,33,0.1)",
+        padding: "40px clamp(20px,6vw,80px)",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        flexWrap: "wrap", gap: "16px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", marginLeft: "16px", flexShrink: 0 }}>
+          <img src={Logo} alt="HINT" style={{ width: "100px", height: "auto" }} />
+        </div>
+        <div style={{ fontSize: "12px", color: C.muted }}>
+          © 2025 HINT Technologies. Verifiable Compute for the Agentic AI Era.
+        </div>
+        <div style={{ display: "flex", gap: "24px" }}>
+          {["Privacy", "Terms", "Security"].map(l => (
+            <span key={l} className="nav-link" style={{ fontSize: "12px" }}>{l}</span>
+          ))}
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   SUB-COMPONENTS (fix hook-in-map violations)
+   ═══════════════════════════════════════════ */
+function StatItem({ val, suffix, label, index }) {
+  const [ref, vis] = useReveal();
+  return (
+    <div ref={ref} style={{
+      opacity: vis ? 1 : 0,
+      transform: vis ? "none" : "translateY(24px)",
+      transition: `all 0.7s ${index * 120}ms cubic-bezier(0.23,1,0.32,1)`,
+    }}>
+      <div className="stat-number">
+        {vis ? <Counter target={val} suffix={suffix} /> : `0${suffix}`}
+      </div>
+      <div style={{ fontSize: "13px", color: "#64748b", marginTop: "8px", letterSpacing: "0.04em" }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function TestimonialCard({ quote, name, role, avatar, index }) {
+  const [ref, vis] = useReveal();
+  return (
+    <div ref={ref} style={{
+      background: "rgba(255,255,255,0.045)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      borderRadius: "16px",
+      padding: "32px",
+      backdropFilter: "blur(4px) saturate(140%)",
+      WebkitBackdropFilter: "blur(4px) saturate(140%)",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 24px rgba(0,0,0,0.25)",
+      opacity: vis ? 1 : 0,
+      transform: vis ? "none" : "translateY(32px)",
+      transition: `all 0.7s ${index * 120}ms cubic-bezier(0.23,1,0.32,1)`,
+    }}>
+      <div style={{ fontSize: "28px", color: "#A0DB21", marginBottom: "20px", lineHeight: 1 }}>"</div>
+      <p style={{ color: "#cbd5e1", fontSize: "15px", lineHeight: 1.7, margin: "0 0 28px", fontStyle: "italic" }}>
+        {quote}
+      </p>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{
+          width: "40px", height: "40px", borderRadius: "50%",
+          background: "linear-gradient(135deg, rgba(160,219,33,0.3), rgba(14,165,233,0.2))",
+          border: "1px solid rgba(160,219,33,0.3)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: "12px", fontWeight: 700, color: "#A0DB21",
+        }}>{avatar}</div>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: "14px", color: "#f8fafc" }}>{name}</div>
+          <div style={{ fontSize: "12px", color: "#64748b" }}>{role}</div>
+        </div>
+      </div>
+    </div>
+  );
+}

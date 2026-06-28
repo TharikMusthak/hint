@@ -1,0 +1,25 @@
+{
+  "name": "hint",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.2",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
+    "vite": "^8.1.0"
+  },
+  "dependencies": {
+    "@studio-freight/lenis": "^1.0.42",
+    "framer-motion": "^12.42.0",
+    "gsap": "^3.15.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "three": "^0.185.0"
+  }
+}
