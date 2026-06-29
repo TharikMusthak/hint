@@ -4,25 +4,72 @@ import FeatureCard from './components/FeatureCard';
 import Logo from './assets/Hint_logo.svg';
 import icon from './assets/Loader.svg';
 import { motion, useScroll, useTransform } from "framer-motion";
+import { Sun, Moon } from "lucide-react";
+ import ThemeToggle from "./components/ThemeToggle";
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
-const C = {
-  emerald: "#A0DB21",
-  emeraldDim: "#A0DB21",
-  emeraldGlow: "#A0DB21",
-  bg: "#040C02",
-  loadingscreen :"#000000",
-  bgMid: "#050d1a",
-  text: "#f8fafc",
-  muted: "#d8d8d8",
-  glass: "rgba(8,16,30,0.6)",
+// const C = {
+//   emerald: "#A0DB21",
+//   emeraldDim: "#A0DB21",
+//   emeraldGlow: "#A0DB21",
+//   bg: "#040C02",
+//   loadingscreen :"#000000",
+//   bgMid: "#050d1a",
+//   text: "#f8fafc",
+//   muted: "#d8d8d8",
+//   glass: "rgba(8,16,30,0.6)",
+// };
+
+
+const themes = {
+  dark: {
+    emerald: "#A0DB21",
+    emeraldDim: "#A0DB21",
+    emeraldGlow: "#A0DB21",
+
+    bg: "#040C02",
+    bgMid: "#050d1a",
+    text: "#f8fafc",
+    muted: "#d8d8d8",
+
+    glass: "rgba(8,16,30,.6)",
+    loading: "#000",
+
+    nav: "rgba(4,12,2,.45)",
+    border: "rgba(255,255,255,.12)",
+    card: "rgba(255,255,255,.05)",
+
+    scrollbar: "#040C02"
+  },
+
+  light: {
+    emerald: "#7DB800",
+    emeraldDim: "#7DB800",
+    emeraldGlow: "#7DB800",
+
+    bg: "#F6F8FB",
+    bgMid: "#FFFFFF",
+
+    text: "#111827",
+    muted: "#5B6472",
+
+    glass: "rgba(255,255,255,.65)",
+    loading: "#ffffff",
+
+    nav: "rgba(255,255,255,.75)",
+    border: "rgba(0,0,0,.08)",
+    card: "rgba(255,255,255,.75)",
+
+    scrollbar: "#E5E7EB"
+  }
 };
+
 
 /* ═══════════════════════════════════════════
    WEBGL CANVAS
    ═══════════════════════════════════════════ */
-function useScene(canvasRef) {
+function useScene(canvasRef,darkMode) {
   const stateRef = useRef({});
 
   useEffect(() => {
@@ -38,7 +85,10 @@ function useScene(canvasRef) {
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
     camera.position.set(0, 0, 8);
 
-    scene.fog = new THREE.FogExp2(0x030712, 0.04);
+    scene.fog = new THREE.FogExp2(
+    darkMode ? 0x030712 : 0xffffff,
+    0.04
+);
 
     const ambient = new THREE.AmbientLight(0x0a1628, 2);
     scene.add(ambient);
@@ -346,7 +396,27 @@ function Counter({ target, suffix = "", duration = 1800 }) {
 function MiniCanvas3D({ type }) {
   const ref = useRef();
   const [inView, setInView] = useState(false);
+const [darkMode, setDarkMode] = useState(true);
+const C = darkMode ? themes.dark : themes.light;
 
+useEffect(() => {
+
+    const saved = localStorage.getItem("theme");
+
+    if(saved){
+        setDarkMode(saved === "dark");
+    }
+
+}, []);
+
+useEffect(() => {
+
+    localStorage.setItem(
+        "theme",
+        darkMode ? "dark" : "light"
+    );
+
+}, [darkMode]); 
   useEffect(() => {
     const obs = new IntersectionObserver(
       ([e]) => setInView(e.isIntersecting),
@@ -362,7 +432,10 @@ function MiniCanvas3D({ type }) {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-    renderer.setClearColor(0, 0);
+  renderer.setClearColor(
+    darkMode ? 0x000000 : 0xffffff,
+    0
+);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
@@ -452,6 +525,27 @@ function MiniCanvas3D({ type }) {
    ═══════════════════════════════════════════ */
 function GlitchText({ text, style = {} }) {
   const [glitch, setGlitch] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
+const C = darkMode ? themes.dark : themes.light;
+
+useEffect(() => {
+
+    const saved = localStorage.getItem("theme");
+
+    if(saved){
+        setDarkMode(saved === "dark");
+    }
+
+}, []);
+
+useEffect(() => {
+
+    localStorage.setItem(
+        "theme",
+        darkMode ? "dark" : "light"
+    );
+
+}, [darkMode]); 
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -481,7 +575,27 @@ function Typewriter({ strings, speed = 55 }) {
   const [idx, setIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
   const [deleting, setDeleting] = useState(false);
+const [darkMode, setDarkMode] = useState(true);
+const C = darkMode ? themes.dark : themes.light;
 
+useEffect(() => {
+
+    const saved = localStorage.getItem("theme");
+
+    if(saved){
+        setDarkMode(saved === "dark");
+    }
+
+}, []);
+
+useEffect(() => {
+
+    localStorage.setItem(
+        "theme",
+        darkMode ? "dark" : "light"
+    );
+
+}, [darkMode]); 
   useEffect(() => {
     const current = strings[idx];
     const delay = deleting ? speed * 0.4 : speed;
@@ -562,8 +676,31 @@ function GlassPanel({ children, height = "420px", accentColor = "rgba(16,185,129
 
 
 export default function App() {
+
+
   const canvasRef = useRef();
   useScene(canvasRef);
+  const [darkMode, setDarkMode] = useState(true);
+const C = darkMode ? themes.dark : themes.light;
+
+useEffect(() => {
+
+    const saved = localStorage.getItem("theme");
+
+    if(saved){
+        setDarkMode(saved === "dark");
+    }
+
+}, []);
+
+useEffect(() => {
+
+    localStorage.setItem(
+        "theme",
+        darkMode ? "dark" : "light"
+    );
+
+}, [darkMode]); 
 
   
   const { scrollY } = useScroll();
@@ -603,16 +740,78 @@ export default function App() {
 }, []);
 
   // FIX 3: all useTransform calls at top level (Rules of Hooks)
-  const navWidth   = useTransform(scrollY, [0, 80, 100], ["100%", "100%", "600px"]);
-  const navRadius  = useTransform(scrollY, [0, 80, 100], ["0px", "0px", "100px"]);
-  const navTop     = useTransform(scrollY, [0, 80, 100], ["0px", "0px", "20px"]);
-  const navPadding = useTransform(scrollY, [0, 80, 100], ["0 clamp(20px,5vw,64px)", "0 clamp(20px,5vw,64px)", "10px 20px"]);
-  // FIX 4: scroll indicator opacity — also top level
-  const scrollIndicatorOpacity = useTransform(scrollY, [0, 200], [1, 0]);
+// Navbar Animations
+const navWidth = useTransform(
+  scrollY,
+  [0, 150],
+  ["90%", "50%"]
+);
 
-  const navScrolled = scrollValue > 40;
+const navTop = useTransform(
+  scrollY,
+  [0, 150],
+  ["20px", "20px"]
+);
 
-  const NavItems=["Overview", "Technology", "Testimonies", "Resources"]
+const navRadius = useTransform(
+  scrollY,
+  [0, 150],
+  ["999px", "999px"]
+);
+
+const navPadding = useTransform(
+  scrollY,
+  [0, 150],
+  ["0 32px", "0 20px"]
+);
+
+const navHeight = useTransform(
+  scrollY,
+  [0, 150],
+  [70, 60]
+);
+
+const navBackground = useTransform(
+  scrollY,
+  [0, 150],
+  [
+    "rgba(4,12,2,0.60)",
+    "rgba(4,12,2,0.90)"
+  ]
+);
+
+const navBorder = useTransform(
+  scrollY,
+  [0, 150],
+  [
+    "rgba(160,219,33,0.15)",
+    "rgba(160,219,33,0.35)"
+  ]
+);
+
+const navShadow = useTransform(
+  scrollY,
+  [0, 150],
+  [
+    "0 0 0 rgba(0,0,0,0)",
+    "0 12px 35px rgba(0,0,0,.45)"
+  ]
+);
+
+const scrollIndicatorOpacity = useTransform(
+  scrollY,
+  [0, 200],
+  [1, 0]
+);
+
+const navScrolled = scrollValue > 40;
+
+const NavItems = [
+  "Overview",
+  "Technology",
+  "Testimonies",
+  "Resources"
+];
 
   return (
     <div style={{
@@ -622,6 +821,16 @@ export default function App() {
       fontFamily: "'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif",
       overflowX: "hidden",
     }}>
+   
+      <ThemeToggle
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+      />
+
+   
+   
+
+
       <motion.div
         className="mouse-glow"
         animate={{ x: mousePos.x, y: mousePos.y }}
@@ -642,7 +851,7 @@ export default function App() {
         }
         @keyframes loader-expand { from { width: 0; } to { width: 100%; } }
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #040C02; }
+        ::-webkit-scrollbar-track { background: ${C.scrollbar} }
         ::-webkit-scrollbar-thumb { background: #A0DB21; border-radius: 4px; }
         .nav-link {
           color: ${C.muted};
@@ -713,6 +922,7 @@ export default function App() {
   filter: blur(40px);
 }
       `}</style>
+      
 
       {/* Loading screen */}
       {!loaded && (
@@ -736,7 +946,7 @@ export default function App() {
       )}
 
       {/* WebGL Canvas  -- galaxy */}
-      <canvas
+      {/* <canvas
         ref={canvasRef}
         style={{
           position: "fixed", top: 0, left: 0,
@@ -744,69 +954,150 @@ export default function App() {
           zIndex: 0, pointerEvents: "none",
           opacity: loaded ? 1 : 0, transition: "opacity 1s",
         }}
-      />
+      /> */}
 
       {/* Radial gradient overlay */}
-      <div style={{
+      {/* <div style={{
         position: "fixed", inset: 0, zIndex: 1, pointerEvents: "none",
         background: "radial-gradient(ellipse 60% 50% at 50% 50%, transparent 0%, rgba(4,12,2,0.4) 100%)",
-      }} />
+      }} /> */}
 
       {/* ── NAVBAR */}
       {/* FIX 5: removed x:"-50%" (not valid MotionValue shorthand in all versions).
                 Use left+transform instead, or marginLeft auto trick */}
-      <motion.nav
+     <motion.nav
+ style={{
+  position: "fixed",
+  top: navTop,
+  left: "50%",
+  transform: "translateX(-50%)",
+  zIndex: 100,
+
+  width: navWidth,
+  height: navHeight,
+  padding: navPadding,
+
+  borderRadius: navRadius,
+
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-evenly",
+
+  // Premium Glass Effect
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%), rgba(4,12,2,0.45)",
+ 
+  backdropFilter: "blur(28px) saturate(180%)",
+  WebkitBackdropFilter: "blur(28px) saturate(180%)",
+
+  border: "1px solid rgba(255,255,255,0.12)",
+
+  boxShadow: `
+      0 8px 32px rgba(0,0,0,.35),
+      inset 0 1px 0 rgba(255,255,255,.12),
+      inset 0 -1px 0 rgba(255,255,255,.03)
+  `,
+
+  overflow: "hidden",
+
+  maxWidth: "1300px",
+}}
+>
+
+  {/* Logo */}
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent:"flex-start",
+      flexShrink: 0,
+    }}
+  >
+    <img
+      src={Logo}
+      alt="Logo"
+      style={{
+        width: "clamp(80px,10vw,110px)",
+        height: "auto",
+        display: "block",
+      }}
+    />
+  </div>
+
+  {/* Navigation */}
+  <motion.div
+    animate={{
+      // opacity: navScrolled ? 0 : 1,
+      // y: navScrolled ? -8 : 0,
+    }}
+    transition={{
+      duration: 0.25,
+    }}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "clamp(12px,2vw,30px)",
+      flex: 1,
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+    }}
+  >
+    {NavItems.map((item) => (
+      <motion.span
+        key={item}
+        whileHover={{
+          y: -2,
+          color: "#B3FF10",
+        }}
+        transition={{
+          duration: 0.2,
+        }}
         style={{
-          position: "fixed",
-          top: navTop,
-          left: "50%",
-          x: "-50%",
-          zIndex: 100,
-          width: navWidth,
-          padding: navPadding,
-          borderRadius: navRadius,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "rgba(4, 12, 2, 0.75)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          height: "64px",
-          border: "1px solid rgba(160, 219, 33, 0.2)",
-          overflow: "hidden",
-          boxShadow: "0 4px 30px rgba(0,0,0,0.5)",
+          cursor: "pointer",
+          color: "#fff",
+          fontWeight: 500,
+          fontSize: "clamp(13px,1vw,15px)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", marginLeft: "16px", flexShrink: 0 }}>
-          <img src={Logo} alt="HINT" style={{ width: "100px", height: "auto" }} />
-        </div>
+        {item}
+      </motion.span>
+    ))}
+  </motion.div>
 
-        {/* FIX 6: animate prop needs plain values, not MotionValues */}
-        <motion.div
-          animate={{ opacity: navScrolled ? 0 : 1 }}
-          transition={{ duration: 0.2 }}
-          style={{ display: "flex", gap: "24px", alignItems: "center", whiteSpace: "nowrap" }}
-        >
-          {NavItems.map(item => (
-            <span key={item} className="nav-link">{item}</span>
-          ))}
-        </motion.div>
-        
-        <div style={{ marginRight: "16px", flexShrink: 0 }}>
-          <MagneticButton style={{
-            background: "linear-gradient(135deg, #B3FF10 0%, #A0DB21 100%)",
-            color: "#040C02",
-            padding: "10px 22px",
-            borderRadius: "100px",
-            fontSize: "13px",
-            fontWeight: 700,
-            letterSpacing: "0.02em",
-            boxShadow: "0 0 20px rgba(160,219,33,0.35)",
-          }}>
-            Get Started
-          </MagneticButton>
-        </div>
-      </motion.nav>
+  {/* Button */}
+  <div
+    style={{
+      flexShrink: 0,
+    }}
+  >
+    <MagneticButton
+      style={{
+        background:
+          "linear-gradient(135deg,#B3FF10 0%,#A0DB21 100%)",
+        color: "#040C02",
+
+        padding: "10px 22px",
+
+        borderRadius: "999px",
+
+        fontSize: "clamp(12px,1vw,14px)",
+
+        fontWeight: 700,
+
+        letterSpacing: ".02em",
+
+        boxShadow:
+          "0 0 20px rgba(160,219,33,.35)",
+
+        whiteSpace: "nowrap",
+      }}
+    >
+      Get Started
+    </MagneticButton>
+  </div>
+
+</motion.nav>
 
       {/* ══ SECTION 1 — HERO ══ */}
       <section style={{
@@ -1016,13 +1307,13 @@ export default function App() {
             <span className="gradient-text">need to be trustworthy</span>
           </h2>
         </div>
-        <div className="grid-3">
-          <FeatureCard icon="🔐" title="Zero-Knowledge Proofs"  body="Prove computation happened correctly without revealing model weights, user data, or business logic." delay={0} />
-          <FeatureCard icon="⚡" title="Sub-20ms Latency"       body="Hardware-accelerated proof generation runs in your existing inference stack with negligible overhead."  delay={100} />
-          <FeatureCard icon="🌐" title="Agentic AI Ready"       body="Verify multi-step agent chains, tool calls, and RAG retrievals — every hop attested and logged."         delay={200} />
-          <FeatureCard icon="📋" title="Compliance Autopilot"   body="Auto-generated audit trails for EU AI Act, SOC 2, HIPAA, and enterprise governance requirements."      delay={300} />
-          <FeatureCard icon="🛡️" title="TEE Enclaves"           body="Trusted Execution Environments guarantee your model runs in a hardware-isolated, attestable context."   delay={400} />
-          <FeatureCard icon="🔗" title="Chain of Custody"       body="Immutable ledger from training checkpoint to user output. Trace any decision back to its origin."       delay={500} />
+        <div className="grid-3" >
+          <FeatureCard darkMode={darkMode} icon="🔐" title="Zero-Knowledge Proofs"  body="Prove computation happened correctly without revealing model weights, user data, or business logic." delay={0} />
+          <FeatureCard darkMode={darkMode} icon="⚡" title="Sub-20ms Latency"       body="Hardware-accelerated proof generation runs in your existing inference stack with negligible overhead."  delay={100} />
+          <FeatureCard darkMode={darkMode} icon="🌐" title="Agentic AI Ready"       body="Verify multi-step agent chains, tool calls, and RAG retrievals — every hop attested and logged."         delay={200} />
+          <FeatureCard darkMode={darkMode} icon="📋" title="Compliance Autopilot"   body="Auto-generated audit trails for EU AI Act, SOC 2, HIPAA, and enterprise governance requirements."      delay={300} />
+          <FeatureCard darkMode={darkMode} icon="🛡️" title="TEE Enclaves"           body="Trusted Execution Environments guarantee your model runs in a hardware-isolated, attestable context."   delay={400} />
+          <FeatureCard darkMode={darkMode} icon="🔗" title="Chain of Custody"       body="Immutable ledger from training checkpoint to user output. Trace any decision back to its origin."       delay={500} />
         </div>
       </section>
 
