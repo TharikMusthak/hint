@@ -612,6 +612,8 @@ export default function App() {
 
   const navScrolled = scrollValue > 40;
 
+  const NavItems=["Overview", "Technology", "Testimonies", "Resources"]
+
   return (
     <div style={{
       background: C.bg,
@@ -733,7 +735,7 @@ export default function App() {
         </div>
       )}
 
-      {/* WebGL Canvas */}
+      {/* WebGL Canvas  -- galaxy */}
       <canvas
         ref={canvasRef}
         style={{
@@ -785,7 +787,7 @@ export default function App() {
           transition={{ duration: 0.2 }}
           style={{ display: "flex", gap: "24px", alignItems: "center", whiteSpace: "nowrap" }}
         >
-          {["Overview", "Technology", "Testimonies", "Resources"].map(item => (
+          {NavItems.map(item => (
             <span key={item} className="nav-link">{item}</span>
           ))}
         </motion.div>
