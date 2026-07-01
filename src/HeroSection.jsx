@@ -5,9 +5,9 @@ import Logo from './assets/Hint_logo.svg';
 import icon from './assets/Loader.svg';
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
- import ThemeToggle from "./components/ThemeToggle";
-
-const lerp = (a, b, t) => a + (b - a) * t;
+import ThemeToggle from "./components/ThemeToggle";
+import { Lensflare, LensflareElement } from "three/examples/jsm/objects/Lensflare.js";
+ const lerp = (a, b, t) => a + (b - a) * t;
 
 // const C = {
 //   emerald: "#A0DB21",
@@ -69,251 +69,370 @@ const themes = {
 /* ═══════════════════════════════════════════
    WEBGL CANVAS
    ═══════════════════════════════════════════ */
-function useScene(canvasRef,darkMode) {
-  const stateRef = useRef({});
+function useScene(canvasRef, darkMode) {
+  const stateRef = useRef({
+    mouseX: 0,
+    mouseY: 0,
+    targetX: 0,
+    targetY: 0,
+
+    // 🚀 ZOOM CONTROL ADDED
+    // Camera
+    targetZ: 1.8,
+    currentZ: 1.8,
+
+    // Earth vertical animation
+    targetEarthY: -1.25,
+    currentEarthY: -1.25,
+
+    // Fade
+    targetOpacity: 1,
+    currentOpacity: 1,
+
+    frame: 60,
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    // =====================
+    // SCENE
+    // =====================
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(darkMode ? 0x02040a : 0x0b1220, 6, 18);
+
+    // =====================
+    // CAMERA
+    // =====================
+    const camera = new THREE.PerspectiveCamera(
+      45,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+camera.position.set(0,0,1.8);
+    // =====================
+    // RENDERER
+    // =====================
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+    });
+
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x000000, 0);
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
-    camera.position.set(0, 0, 8);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = darkMode ? 0.9 : 1.6;
+    // =====================
+    // TEXTURES
+    // =====================
+    const loader = new THREE.TextureLoader();
 
-    scene.fog = new THREE.FogExp2(
-    darkMode ? 0x030712 : 0xffffff,
-    0.04
+ 
+const earthDay = loader.load(
+  "https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg"
 );
 
-    const ambient = new THREE.AmbientLight(0x0a1628, 2);
-    scene.add(ambient);
+const earthNight = loader.load(
+  "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_lights_2048.png"
+);
+    const heightMap = loader.load(
+      "https://cdn.jsdelivr.net/gh/turban/webgl-earth/data/elev_bump_4k.jpg"
+    );
 
-    const pointA = new THREE.PointLight(0x10b981, 80, 30);
-    pointA.position.set(3, 4, 5);
-    scene.add(pointA);
+    const normalMap = loader.load(
+      "https://threejs.org/examples/textures/earth_normalmap_flat.jpg"
+    );
+earthDay.colorSpace = THREE.SRGBColorSpace;
+earthNight.colorSpace = THREE.SRGBColorSpace;
 
-    const pointB = new THREE.PointLight(0x0ea5e9, 40, 20);
-    pointB.position.set(-4, -2, 3);
-    scene.add(pointB);
+   const earthTexture = darkMode ? earthNight : earthDay;
 
-    const rimLight = new THREE.PointLight(0x34d399, 20, 15);
-    rimLight.position.set(0, -5, -3);
-    scene.add(rimLight);
 
-    const chipGeo = new THREE.SphereGeometry(0.15, 16, 16);
-    const chipMat = new THREE.MeshPhysicalMaterial({
-      color: 0x0a1628, metalness: 0.9, roughness: 0.15,
-      emissive: 0x10b981, emissiveIntensity: 0.12, envMapIntensity: 1.2,
+    // =====================
+    // EARTH
+    // =====================
+  const globeMaterial = darkMode
+  ? new THREE.MeshBasicMaterial({
+      map: earthNight,
+        color: new THREE.Color("#a0db21"), // Tint the entire texture
+
+    })
+  : new THREE.MeshStandardMaterial({
+      map: earthDay,
+      displacementMap: heightMap,
+      displacementScale: 0.06,
+      normalMap: normalMap,
+      normalScale: new THREE.Vector2(0.6, 0.6),
+      roughness: 0.8,
+      metalness: 0.0,
     });
-    const chip = new THREE.Mesh(chipGeo, chipMat);
-    scene.add(chip);
 
-    const ringGeo = new THREE.TorusGeometry(1.35, 0.012, 8, 80);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.8 });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.rotation.x = Math.PI / 2;
-    scene.add(ring);
+const globe = new THREE.Mesh(
+  new THREE.SphereGeometry(1.45, 384, 384),
+  globeMaterial
+);
 
-    const ring2Geo = new THREE.TorusGeometry(1.55, 0.006, 8, 80);
-    const ring2Mat = new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.3 });
-    const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
-    ring2.rotation.x = Math.PI / 2;
-    scene.add(ring2);
+    scene.add(globe);
+    globe.position.y = -1.25;
+     // =====================
+    // ATMOSPHERE
+    // =====================
+   const atmosphere = new THREE.Mesh(
+  new THREE.SphereGeometry(1.12, 256, 256),
+  new THREE.ShaderMaterial({
+    transparent: true,
+    side: THREE.BackSide,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
 
-    const traceGroup = new THREE.Group();
-    const traceMat = new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.6 });
-    const traceData = [
-      [[-0.7, 0.2, 0.12], [-0.3, 0.2, 0.12], [-0.3, -0.2, 0.12], [0, -0.2, 0.12]],
-      [[0.7, 0.4, 0.12], [0.2, 0.4, 0.12], [0.2, 0.1, 0.12]],
-      [[-0.5, -0.5, 0.12], [-0.5, -0.1, 0.12], [0.1, -0.1, 0.12]],
-      [[0.3, -0.5, 0.12], [0.3, -0.3, 0.12], [-0.1, -0.3, 0.12], [-0.1, 0.3, 0.12]],
-    ];
-    traceData.forEach(pts => {
-      const geo = new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(...p)));
-      traceGroup.add(new THREE.Line(geo, traceMat));
-    });
-    chip.add(traceGroup);
+    uniforms: {
+      glowColor: {
+        value: new THREE.Color(darkMode ? 0xa0db21 : 0x66b3ff),
+      },
+      intensity: {
+    value: darkMode ? 8.0 : 2.0,
+}
+    },
 
-    const latticeGroup = new THREE.Group();
-    const orbitalAngles = [0, 35, 70, 110, 145];
-    orbitalAngles.forEach((deg, i) => {
-      const radius = 2.5 + i * 0.15;
-      const pts = [];
-      for (let j = 0; j <= 64; j++) {
-        const a = (j / 64) * Math.PI * 2;
-        pts.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, 0));
+    vertexShader: `
+      varying vec3 vNormal;
+
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+
+        gl_Position =
+          projectionMatrix *
+          modelViewMatrix *
+          vec4(position,1.0);
       }
-      const geo = new THREE.BufferGeometry().setFromPoints(pts);
-      const orb = new THREE.Line(geo, new THREE.LineBasicMaterial({
-        color: 0x10b981, transparent: true, opacity: 0.12 + (i * 0.04)
-      }));
-      orb.rotation.x = THREE.MathUtils.degToRad(deg);
-      orb.rotation.y = THREE.MathUtils.degToRad(deg * 0.5);
-      latticeGroup.add(orb);
-    });
-    scene.add(latticeGroup);
+    `,
 
-    const nodeMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
-    const nodeGeo = new THREE.SphereGeometry(0.045, 8, 8);
-    const nodes = [];
-    const nodeOrbitData = [
-      { radius: 2.6, speed: 0.4, phase: 0, tilt: 0 },
-      { radius: 2.9, speed: -0.3, phase: 1.2, tilt: Math.PI / 3 },
-      { radius: 3.2, speed: 0.25, phase: 2.4, tilt: Math.PI / 6 },
-      { radius: 2.4, speed: -0.5, phase: 3.6, tilt: Math.PI / 4 },
-      { radius: 3.0, speed: 0.35, phase: 4.8, tilt: Math.PI / 2.5 },
-      { radius: 2.7, speed: -0.2, phase: 0.5, tilt: Math.PI / 1.8 },
-    ];
-    nodeOrbitData.forEach(d => {
-      const n = new THREE.Mesh(nodeGeo, nodeMat.clone());
-      n.userData = d;
-      nodes.push(n);
-      scene.add(n);
-    });
+   fragmentShader: `
+uniform vec3 glowColor;
+uniform float intensity;
 
-    const connLines = nodes.map(() => {
-      const geo = new THREE.BufferGeometry();
-      const pos = new Float32Array(6);
-      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
-        color: 0x10b981, transparent: true, opacity: 0.2
-      }));
-      scene.add(line);
-      return { line, geo };
-    });
+varying vec3 vNormal;
 
-    const PARTICLE_COUNT = 1800;
-    const pPositions = new Float32Array(PARTICLE_COUNT * 3);
-    const pSpeeds = new Float32Array(PARTICLE_COUNT);
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = 4 + Math.random() * 10;
-      pPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      pPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      pPositions[i * 3 + 2] = r * Math.cos(phi);
-      pSpeeds[i] = 0.15 + Math.random() * 0.35;
+void main() {
+
+    float fresnel =
+        pow(
+            1.0 - max(dot(vNormal, vec3(0.0,0.0,-1.0)), 0.0),
+            2.2
+        );
+
+    fresnel *= intensity;
+
+    gl_FragColor = vec4(glowColor, fresnel * 0.35);
+}
+`,
+  })
+);
+
+scene.add(atmosphere);
+
+    // =====================
+    // LIGHTING
+    // =====================
+const sun = new THREE.DirectionalLight(
+    0xffffff,
+    darkMode ? 0.2 : 3.2
+);    sun.position.set(8, 4, 6);
+    scene.add(sun);
+
+scene.add(
+    new THREE.AmbientLight(
+        0xffffff,
+        darkMode ? 0.1 : 0.8
+    )
+);
+
+// =====================
+// GREEN SUN GLOW
+// =====================
+// =====================
+// INTENSE GREEN SUN GLOW
+// =====================
+const glowTexture = loader.load(
+  "https://threejs.org/examples/textures/sprites/glow.png"
+);
+ 
+
+
+
+    // =====================
+    // STARS
+    // =====================
+    // =====================
+    // 🌟 ENHANCED STARS (MORE VISIBLE + CINEMATIC)
+    // =====================
+    const starGeo = new THREE.BufferGeometry();
+    const starArr = [];
+    const starSizes = [];
+
+    const starCount = 8000; // increased density
+
+    for (let i = 0; i < starCount; i++) {
+      const x = (Math.random() - 0.5) * 80;
+      const y = (Math.random() - 0.5) * 80;
+      const z = (Math.random() - 0.5) * 80;
+
+      starArr.push(x, y, z);
+
+      // 🌟 random brightness feel
+      starSizes.push(Math.random() * 1.2 + 0.3);
     }
-    const pGeo = new THREE.BufferGeometry();
-    pGeo.setAttribute("position", new THREE.BufferAttribute(pPositions, 3));
-    const pMat = new THREE.PointsMaterial({
-      color: 0x10b981, size: 0.035, sizeAttenuation: true,
-      transparent: true, opacity: 0.55,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-    });
-    const particles = new THREE.Points(pGeo, pMat);
-    scene.add(particles);
 
-    const hexGroup = new THREE.Group();
-    const hexShape = new THREE.Shape();
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2 - Math.PI / 6;
-      if (i === 0) hexShape.moveTo(Math.cos(a), Math.sin(a));
-      else hexShape.lineTo(Math.cos(a), Math.sin(a));
-    }
-    hexShape.closePath();
-    [[-6,3,-4],[7,-2,-6],[-5,-5,-3],[8,5,-8],[0,7,-5],[-8,1,-7]].forEach(([x,y,z]) => {
-      const geo = new THREE.ShapeGeometry(hexShape);
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0x10b981, wireframe: true, transparent: true, opacity: 0.045
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x, y, z);
-      mesh.scale.setScalar(0.6 + Math.random() * 1.2);
-      hexGroup.add(mesh);
-    });
-    scene.add(hexGroup);
+    starGeo.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(starArr, 3)
+    );
 
-    const mouse = { x: 0, y: 0, lerpX: 0, lerpY: 0 };
-    const onMouseMove = e => {
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    // attach size as attribute (for shader-like variation)
+    starGeo.setAttribute(
+      "size",
+      new THREE.Float32BufferAttribute(starSizes, 1)
+    );
+
+   const stars = new THREE.Points(
+  starGeo,
+  new THREE.PointsMaterial({
+    color: darkMode ? 0xffffff : 0xa0db21, // White in dark mode, #a0db21 in light mode
+size: darkMode ? 0.04 : 0.055,    sizeAttenuation: true,
+    transparent: true,
+    opacity: darkMode ? 0.95 : 0.85,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+);
+
+    scene.add(stars);
+
+    // =====================
+    // MOUSE PARALLAX
+    // =====================
+    const onMouseMove = (e) => {
+      stateRef.current.mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+      stateRef.current.mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
     };
+
     window.addEventListener("mousemove", onMouseMove);
 
-    let scrollY = 0;
-    const onScroll = () => { scrollY = window.scrollY; };
+    // =====================
+    // 🚀 ZOOM OUT (SCROLL CONTROL)
+    // =====================
+    const onScroll = () => {
+      const scroll = window.scrollY;
+
+      // First 400px -> bring Earth upward
+      const moveProgress = Math.min(scroll / 400, 1);
+
+      stateRef.current.targetEarthY =
+        -1.25 + moveProgress * 1.25;
+
+      // After Earth reaches center, zoom out
+      const zoomProgress = Math.max(scroll - 400, 0);
+
+      stateRef.current.targetZ =
+        1.8 + zoomProgress * 0.0045;
+
+      // Fade Earth slowly
+      stateRef.current.targetOpacity =
+        Math.max(0, 1 - zoomProgress * 0.002);
+
+      // Stars become brighter
+      stars.material.opacity =
+        Math.min(1, 0.35 + zoomProgress * 0.0015);
+    };
+
     window.addEventListener("scroll", onScroll);
 
+    // =====================
+    // RESIZE
+    // =====================
     const onResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
+
     window.addEventListener("resize", onResize);
 
-    let raf, t = 0;
+    // =====================
+    // ANIMATION LOOP
+    // =====================
     const animate = () => {
-      raf = requestAnimationFrame(animate);
-      t += 0.008;
-      mouse.lerpX = lerp(mouse.lerpX, mouse.x, 0.06);
-      mouse.lerpY = lerp(mouse.lerpY, mouse.y, 0.06);
+      stateRef.current.frame = requestAnimationFrame(animate);
 
-      const scrollFade = Math.min(scrollY / 600, 1);
-      camera.position.x = lerp(camera.position.x, mouse.lerpX * 1.2, 0.03);
-      camera.position.y = lerp(camera.position.y, mouse.lerpY * 0.8 - scrollY * 0.003, 0.03);
+      // mouse smoothing
+      stateRef.current.targetX +=
+        (stateRef.current.mouseX - stateRef.current.targetX) * 0.03;
+
+      stateRef.current.targetY +=
+        (stateRef.current.mouseY - stateRef.current.targetY) * 0.03;
+
+      // 🌍 rotation
+      globe.rotation.y += 0.0008;
+      atmosphere.rotation.y += 0.0008;
+atmosphere.rotation.copy(globe.rotation);
+atmosphere.position.copy(globe.position);
+      // 🚀 SMOOTH ZOOM OUT (IMPORTANT PART)
+      stateRef.current.currentZ +=
+        (stateRef.current.targetZ - stateRef.current.currentZ) * 0.05;
+
+      camera.position.z = stateRef.current.currentZ;
+
+      // 🎥 parallax camera
+      camera.position.x = stateRef.current.targetX * 0.35;
+      camera.position.y = stateRef.current.targetY * 0.25;
+      // Earth moves upward smoothly
+      stateRef.current.currentEarthY +=
+        (stateRef.current.targetEarthY -
+          stateRef.current.currentEarthY) *
+        0.06;
+
+      globe.position.y = stateRef.current.currentEarthY;
+      atmosphere.position.y = stateRef.current.currentEarthY;
+
+stateRef.current.currentOpacity +=
+  (stateRef.current.targetOpacity -
+    stateRef.current.currentOpacity) *
+  0.05;
+
+globe.material.opacity = stateRef.current.currentOpacity;
+globe.material.transparent = true;
+
+atmosphere.material.opacity =
+  stateRef.current.currentOpacity * 0.8;
+atmosphere.scale.set(1.08, 1.08, 1.08);
       camera.lookAt(0, 0, 0);
 
-      chip.rotation.y = t * 0.18 + mouse.lerpX * 0.3;
-      chip.rotation.x = mouse.lerpY * 0.15 + Math.sin(t * 0.4) * 0.05;
-      ring.rotation.z = t * 0.25;
-      ring2.rotation.z = -t * 0.15;
-      ring2.rotation.y = t * 0.12;
-      latticeGroup.rotation.y = t * 0.08;
-      latticeGroup.rotation.x = t * 0.04;
-
-      nodes.forEach((node, i) => {
-        const d = node.userData;
-        const angle = t * d.speed + d.phase;
-        const x = Math.cos(angle) * d.radius;
-        const y = Math.sin(angle) * d.radius;
-        const quat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), d.tilt);
-        const pos = new THREE.Vector3(x, y, 0).applyQuaternion(quat);
-        node.position.copy(pos);
-        const posArr = connLines[i].geo.attributes.position.array;
-        posArr[0] = pos.x; posArr[1] = pos.y; posArr[2] = pos.z;
-        posArr[3] = 0; posArr[4] = 0; posArr[5] = 0;
-        connLines[i].geo.attributes.position.needsUpdate = true;
-        node.material.opacity = 0.5 + Math.sin(t * 2 + i) * 0.5;
-      });
-
-      const pPos = particles.geometry.attributes.position.array;
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        pPos[i * 3 + 1] -= pSpeeds[i] * 0.004;
-        if (pPos[i * 3 + 1] < -14) pPos[i * 3 + 1] = 14;
-      }
-      particles.geometry.attributes.position.needsUpdate = true;
-      particles.rotation.y = t * 0.012;
-
-      pointA.position.x = Math.sin(t * 0.5) * 5;
-      pointA.position.y = Math.cos(t * 0.3) * 3;
-      rimLight.intensity = 15 + Math.sin(t * 1.5) * 8;
-      hexGroup.rotation.y = t * 0.02;
-      hexGroup.rotation.z = t * 0.01;
-      scene.fog.density = 0.04 + scrollFade * 0.06;
+      // 🌌 stars drift
+      stars.rotation.y += 0.00015;
 
       renderer.render(scene, camera);
     };
-    animate();
-    stateRef.current = { renderer, scene, camera };
+  animate();
 
+    // =====================
+    // CLEANUP
+    // =====================
     return () => {
-      cancelAnimationFrame(raf);
-      renderer.dispose();
+      cancelAnimationFrame(stateRef.current.frame);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
+
+      scene.clear();
+      renderer.dispose();
     };
-  }, []);
-
-  return stateRef;
+  }, [canvasRef, darkMode]);
 }
-
 /* ═══════════════════════════════════════════
    MAGNETIC BUTTON
    ═══════════════════════════════════════════ */
@@ -396,27 +515,27 @@ function Counter({ target, suffix = "", duration = 1800 }) {
 function MiniCanvas3D({ type }) {
   const ref = useRef();
   const [inView, setInView] = useState(false);
-const [darkMode, setDarkMode] = useState(true);
-const C = darkMode ? themes.dark : themes.light;
+  const [darkMode, setDarkMode] = useState(true);
+  const C = darkMode ? themes.dark : themes.light;
 
-useEffect(() => {
+  useEffect(() => {
 
     const saved = localStorage.getItem("theme");
 
-    if(saved){
-        setDarkMode(saved === "dark");
+    if (saved) {
+      setDarkMode(saved === "dark");
     }
 
-}, []);
+  }, []);
 
-useEffect(() => {
+  useEffect(() => {
 
     localStorage.setItem(
-        "theme",
-        darkMode ? "dark" : "light"
+      "theme",
+      darkMode ? "dark" : "light"
     );
 
-}, [darkMode]); 
+  }, [darkMode]);
   useEffect(() => {
     const obs = new IntersectionObserver(
       ([e]) => setInView(e.isIntersecting),
@@ -432,10 +551,10 @@ useEffect(() => {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-  renderer.setClearColor(
-    darkMode ? 0x000000 : 0xffffff,
-    0
-);
+    renderer.setClearColor(
+      darkMode ? 0x000000 : 0xffffff,
+      0
+    );
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
@@ -486,7 +605,7 @@ useEffect(() => {
         })
       );
       group.add(mesh);
-      [[1.8,0.5],[1.4,1.4],[0,1.9],[-1.4,1.2],[-1.8,0],[-1.3,-1.5],[0.5,-1.8]].forEach(([x,y]) => {
+      [[1.8, 0.5], [1.4, 1.4], [0, 1.9], [-1.4, 1.2], [-1.8, 0], [-1.3, -1.5], [0.5, -1.8]].forEach(([x, y]) => {
         const s = new THREE.Mesh(
           new THREE.SphereGeometry(0.12, 16, 16),
           new THREE.MeshBasicMaterial({ color: 0x10b981 })
@@ -494,7 +613,7 @@ useEffect(() => {
         s.position.set(x, y, 0);
         group.add(s);
         group.add(new THREE.Line(
-          new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(x,y,0)]),
+          new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(x, y, 0)]),
           new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.3 })
         ));
       });
@@ -526,44 +645,44 @@ useEffect(() => {
 function GlitchText({ text, style = {} }) {
   const [glitch, setGlitch] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
-const C = darkMode ? themes.dark : themes.light;
+  const C = darkMode ? themes.dark : themes.light;
 
-useEffect(() => {
+  useEffect(() => {
 
     const saved = localStorage.getItem("theme");
 
-    if(saved){
-        setDarkMode(saved === "dark");
+    if (saved) {
+      setDarkMode(saved === "dark");
     }
 
-}, []);
+  }, []);
 
-useEffect(() => {
+  useEffect(() => {
 
     localStorage.setItem(
-        "theme",
-        darkMode ? "dark" : "light"
+      "theme",
+      darkMode ? "dark" : "light"
     );
 
-}, [darkMode]); 
+  }, [darkMode]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setGlitch(true);
       setTimeout(() => setGlitch(false), 120);
-    }, 4000 + Math.random() * 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <span style={{
+    <div style={{
       display: "inline-block", position: "relative",
       ...style,
       ...(glitch ? { textShadow: `2px 0 ${C.emeraldGlow}, -2px 0 #0ea5e9` } : {}),
       transition: "text-shadow 0.05s",
     }}>
       {text}
-    </span>
+    </div>
   );
 }
 
@@ -575,27 +694,27 @@ function Typewriter({ strings, speed = 55 }) {
   const [idx, setIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
   const [deleting, setDeleting] = useState(false);
-const [darkMode, setDarkMode] = useState(true);
-const C = darkMode ? themes.dark : themes.light;
+  const [darkMode, setDarkMode] = useState(true);
+  const C = darkMode ? themes.dark : themes.light;
 
-useEffect(() => {
+  useEffect(() => {
 
     const saved = localStorage.getItem("theme");
 
-    if(saved){
-        setDarkMode(saved === "dark");
+    if (saved) {
+      setDarkMode(saved === "dark");
     }
 
-}, []);
+  }, []);
 
-useEffect(() => {
+  useEffect(() => {
 
     localStorage.setItem(
-        "theme",
-        darkMode ? "dark" : "light"
+      "theme",
+      darkMode ? "dark" : "light"
     );
 
-}, [darkMode]); 
+  }, [darkMode]);
   useEffect(() => {
     const current = strings[idx];
     const delay = deleting ? speed * 0.4 : speed;
@@ -676,142 +795,142 @@ function GlassPanel({ children, height = "420px", accentColor = "rgba(16,185,129
 
 
 export default function App() {
+  const [darkMode, setDarkMode] = useState(true);
 
 
   const canvasRef = useRef();
-  useScene(canvasRef);
-  const [darkMode, setDarkMode] = useState(true);
-const C = darkMode ? themes.dark : themes.light;
+  useScene(canvasRef,darkMode);
+  const C = darkMode ? themes.dark : themes.light;
 
-useEffect(() => {
+  useEffect(() => {
 
     const saved = localStorage.getItem("theme");
 
-    if(saved){
-        setDarkMode(saved === "dark");
+    if (saved) {
+      setDarkMode(saved === "dark");
     }
 
-}, []);
+  }, []);
 
-useEffect(() => {
+  useEffect(() => {
 
     localStorage.setItem(
-        "theme",
-        darkMode ? "dark" : "light"
+      "theme",
+      darkMode ? "dark" : "light"
     );
 
-}, [darkMode]); 
+  }, [darkMode]);
 
-  
+
   const { scrollY } = useScroll();
 
- const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [scrollValue, setScrollValue] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [progress, setProgress] = useState(0);
-   useEffect(() => {
-    const totalTime = 500; 
-    
-    
+  useEffect(() => {
+    const totalTime = 500;
+
+
     const interval = setInterval(() => {
       setProgress(prev => (prev < 100 ? prev + 1 : 100));
     }, totalTime / 100);
 
-    
+
     const finishTimer = setTimeout(() => setLoaded(true), totalTime);
-   
-    
+
+
     const onScroll = () => setScrollValue(window.scrollY);
     window.addEventListener("scroll", onScroll);
 
-    return () => { 
-      clearInterval(interval); 
-      clearTimeout(finishTimer); 
-      window.removeEventListener("scroll", onScroll); 
+    return () => {
+      clearInterval(interval);
+      clearTimeout(finishTimer);
+      window.removeEventListener("scroll", onScroll);
     };
   }, []);
 
   useEffect(() => {
-  const handleMouseMove = (e) => {
-    setMousePos({ x: e.clientX, y: e.clientY });
-  };
-  window.addEventListener("mousemove", handleMouseMove);
-  return () => window.removeEventListener("mousemove", handleMouseMove);
-}, []);
+    const handleMouseMove = (e) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   // FIX 3: all useTransform calls at top level (Rules of Hooks)
-// Navbar Animations
-const navWidth = useTransform(
-  scrollY,
-  [0, 150],
-  ["90%", "50%"]
-);
+  // Navbar Animations
+  const navWidth = useTransform(
+    scrollY,
+    [0, 150],
+    ["90%", "50%"]
+  );
 
-const navTop = useTransform(
-  scrollY,
-  [0, 150],
-  ["20px", "20px"]
-);
+  const navTop = useTransform(
+    scrollY,
+    [0, 150],
+    ["20px", "20px"]
+  );
 
-const navRadius = useTransform(
-  scrollY,
-  [0, 150],
-  ["999px", "999px"]
-);
+  const navRadius = useTransform(
+    scrollY,
+    [0, 150],
+    ["999px", "999px"]
+  );
 
-const navPadding = useTransform(
-  scrollY,
-  [0, 150],
-  ["0 32px", "0 20px"]
-);
+  const navPadding = useTransform(
+    scrollY,
+    [0, 150],
+    ["0 32px", "0 20px"]
+  );
 
-const navHeight = useTransform(
-  scrollY,
-  [0, 150],
-  [70, 60]
-);
+  const navHeight = useTransform(
+    scrollY,
+    [0, 150],
+    [70, 60]
+  );
 
-const navBackground = useTransform(
-  scrollY,
-  [0, 150],
-  [
-    "rgba(4,12,2,0.60)",
-    "rgba(4,12,2,0.90)"
-  ]
-);
+  const navBackground = useTransform(
+    scrollY,
+    [0, 150],
+    [
+      "rgba(4,12,2,0.60)",
+      "rgba(4,12,2,0.90)"
+    ]
+  );
 
-const navBorder = useTransform(
-  scrollY,
-  [0, 150],
-  [
-    "rgba(160,219,33,0.15)",
-    "rgba(160,219,33,0.35)"
-  ]
-);
+  const navBorder = useTransform(
+    scrollY,
+    [0, 150],
+    [
+      "rgba(160,219,33,0.15)",
+      "rgba(160,219,33,0.35)"
+    ]
+  );
 
-const navShadow = useTransform(
-  scrollY,
-  [0, 150],
-  [
-    "0 0 0 rgba(0,0,0,0)",
-    "0 12px 35px rgba(0,0,0,.45)"
-  ]
-);
+  const navShadow = useTransform(
+    scrollY,
+    [0, 150],
+    [
+      "0 0 0 rgba(0,0,0,0)",
+      "0 12px 35px rgba(0,0,0,.45)"
+    ]
+  );
 
-const scrollIndicatorOpacity = useTransform(
-  scrollY,
-  [0, 200],
-  [1, 0]
-);
+  const scrollIndicatorOpacity = useTransform(
+    scrollY,
+    [0, 200],
+    [1, 0]
+  );
 
-const navScrolled = scrollValue > 40;
+  const navScrolled = scrollValue > 40;
 
-const NavItems = [
-  "Overview",
-  "Technology",
-  "Testimonies",
-  "Resources"
-];
+  const NavItems = [
+    "Overview",
+    "Technology",
+    "Testimonies",
+    "Resources"
+  ];
 
   return (
     <div style={{
@@ -821,14 +940,14 @@ const NavItems = [
       fontFamily: "'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif",
       overflowX: "hidden",
     }}>
-   
+
       <ThemeToggle
         darkMode={darkMode}
         setDarkMode={setDarkMode}
       />
 
-   
-   
+
+
 
 
       <motion.div
@@ -922,7 +1041,7 @@ const NavItems = [
   filter: blur(40px);
 }
       `}</style>
-      
+
 
       {/* Loading screen */}
       {!loaded && (
@@ -933,8 +1052,8 @@ const NavItems = [
           gap: "24px",
         }}>
           <div style={{ display: "flex", alignItems: "center", marginLeft: "16px", flexShrink: 0 }}>
-          <img src={icon} alt="HINT" style={{ width: "100px", height: "auto" }} />
-        </div>
+            <img src={icon} alt="HINT" style={{ width: "100px", height: "auto" }} />
+          </div>
           <div style={{ width: "200px", height: "1px", background: "rgba(7, 10, 1, 0.2)", overflow: "hidden", borderRadius: "2px" }}>
             <div style={{ height: "100%", background: C.emerald, width: `${progress}%` }} />
           </div>
@@ -946,7 +1065,7 @@ const NavItems = [
       )}
 
       {/* WebGL Canvas  -- galaxy */}
-      {/* <canvas
+      <canvas
         ref={canvasRef}
         style={{
           position: "fixed", top: 0, left: 0,
@@ -954,7 +1073,7 @@ const NavItems = [
           zIndex: 0, pointerEvents: "none",
           opacity: loaded ? 1 : 0, transition: "opacity 1s",
         }}
-      /> */}
+      />
 
       {/* Radial gradient overlay */}
       {/* <div style={{
@@ -965,139 +1084,139 @@ const NavItems = [
       {/* ── NAVBAR */}
       {/* FIX 5: removed x:"-50%" (not valid MotionValue shorthand in all versions).
                 Use left+transform instead, or marginLeft auto trick */}
-     <motion.nav
- style={{
-  position: "fixed",
-  top: navTop,
-  left: "50%",
-  transform: "translateX(-50%)",
-  zIndex: 100,
+      <motion.nav
+        style={{
+          position: "fixed",
+          top: navTop,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 100,
 
-  width: navWidth,
-  height: navHeight,
-  padding: navPadding,
+          width: navWidth,
+          height: navHeight,
+          padding: navPadding,
 
-  borderRadius: navRadius,
+          borderRadius: navRadius,
 
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-evenly",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-evenly",
 
-  // Premium Glass Effect
-  background:
-    "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%), rgba(4,12,2,0.45)",
- 
-  backdropFilter: "blur(28px) saturate(180%)",
-  WebkitBackdropFilter: "blur(28px) saturate(180%)",
+          // Premium Glass Effect
+          background:
+            "linear-gradient(90deg, transparent, transparent)",
 
-  border: "1px solid rgba(255,255,255,0.12)",
+          backdropFilter: "blur(1.5px) saturate(100%)",
+          WebkitBackdropFilter: "blur(5px) saturate(100%)",
+          //  transform:"rotate(25deg)",
 
-  boxShadow: `
-      0 8px 32px rgba(0,0,0,.35),
-      inset 0 1px 0 rgba(255,255,255,.12),
-      inset 0 -1px 0 rgba(255,255,255,.03)
+          animation: "shine 6s linear infinite",
+          border: "1px solid rgba(255,255,255,0.12)",
+
+          boxShadow: `
+      rgba(0, 0, 0, 0.1) 0px 0px 20px, rgba(255, 255, 255, 0.12) 0px 1px 0px inset, rgba(255, 255, 255, 0.03) 0px -1px 0px inset
   `,
 
-  overflow: "hidden",
+          overflow: "hidden",
 
-  maxWidth: "1300px",
-}}
->
-
-  {/* Logo */}
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent:"flex-start",
-      flexShrink: 0,
-    }}
-  >
-    <img
-      src={Logo}
-      alt="Logo"
-      style={{
-        width: "clamp(80px,10vw,110px)",
-        height: "auto",
-        display: "block",
-      }}
-    />
-  </div>
-
-  {/* Navigation */}
-  <motion.div
-    animate={{
-      // opacity: navScrolled ? 0 : 1,
-      // y: navScrolled ? -8 : 0,
-    }}
-    transition={{
-      duration: 0.25,
-    }}
-    style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: "clamp(12px,2vw,30px)",
-      flex: 1,
-      whiteSpace: "nowrap",
-      overflow: "hidden",
-    }}
-  >
-    {NavItems.map((item) => (
-      <motion.span
-        key={item}
-        whileHover={{
-          y: -2,
-          color: "#B3FF10",
-        }}
-        transition={{
-          duration: 0.2,
-        }}
-        style={{
-          cursor: "pointer",
-          color: "#fff",
-          fontWeight: 500,
-          fontSize: "clamp(13px,1vw,15px)",
+          maxWidth: "1300px",
         }}
       >
-        {item}
-      </motion.span>
-    ))}
-  </motion.div>
 
-  {/* Button */}
-  <div
-    style={{
-      flexShrink: 0,
-    }}
-  >
-    <MagneticButton
-      style={{
-        background:
-          "linear-gradient(135deg,#B3FF10 0%,#A0DB21 100%)",
-        color: "#040C02",
+        {/* Logo */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src={Logo}
+            alt="Logo"
+            style={{
+              width: "clamp(80px,10vw,110px)",
+              height: "auto",
+              display: "block",
+            }}
+          />
+        </div>
 
-        padding: "10px 22px",
+        {/* Navigation */}
+        <motion.div
+          animate={{
+            // opacity: navScrolled ? 0 : 1,
+            // y: navScrolled ? -8 : 0,
+          }}
+          transition={{
+            duration: 0.25,
+          }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "clamp(12px,2vw,30px)",
+            flex: 1,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+          }}
+        >
+          {NavItems.map((item) => (
+            <motion.span
+              key={item}
+              whileHover={{
+                y: -2,
+                color: C.text,
+              }}
+              transition={{
+                duration: 0.2,
+              }}
+              style={{
+                cursor: "pointer",
+                fontWeight: 500,
+                fontSize: "clamp(13px,1vw,15px)",
+              }}
+            >
+              {item}
+            </motion.span>
+          ))}
+        </motion.div>
 
-        borderRadius: "999px",
+        {/* Button */}
+        <div
+          style={{
+            flexShrink: 0,
+          }}
+        >
+          <MagneticButton
+            style={{
+              background:
+                "linear-gradient(135deg,#B3FF10 0%,#A0DB21 100%)",
+              color: "#040C02",
 
-        fontSize: "clamp(12px,1vw,14px)",
+              padding: "10px 22px",
 
-        fontWeight: 700,
+              borderRadius: "999px",
 
-        letterSpacing: ".02em",
+              fontSize: "clamp(12px,1vw,14px)",
 
-        boxShadow:
-          "0 0 20px rgba(160,219,33,.35)",
+              fontWeight: 700,
 
-        whiteSpace: "nowrap",
-      }}
-    >
-      Get Started
-    </MagneticButton>
-  </div>
+              letterSpacing: ".02em",
 
-</motion.nav>
+              boxShadow:
+                "0 0 20px rgba(160,219,33,.35)",
+
+              whiteSpace: "nowrap",
+            }}
+          >
+            Get Started
+          </MagneticButton>
+        </div>
+
+      </motion.nav>
+
 
       {/* ══ SECTION 1 — HERO ══ */}
       <section style={{
@@ -1127,10 +1246,10 @@ const NavItems = [
         </div> */}
 
         <h1 className="hero-title" style={{ animation: loaded ? "fade-up 0.9s 0.55s both" : "none" }}>
-          <span className="gradient-text">Verify</span>{" "}
-          <span style={{ color: C.text }}>to</span>
+          <span className="gradient-text">Let's Build</span>{" "}
+          {/* <span style={{ color: C.text }}>to</span> */}
           <br />
-          <GlitchText text="Trust AI" style={{ color: C.text }} />
+          <GlitchText text="Something Great" style={{ color: C.text }} />
         </h1>
 
         <p style={{
@@ -1141,11 +1260,10 @@ const NavItems = [
           animation: loaded ? "fade-up 0.9s 0.7s both" : "none",
         }}>
           <Typewriter strings={[
-            "Cryptographic proof for every AI inference.",
-            "Tamper-evident logs for agentic pipelines.",
-            "Compliance-ready audits in milliseconds.",
-            "Zero-trust compute — verified end-to-end.",
-          ]} />
+            "Your Next Big Idea Starts Here.",
+            "Human Intelligence. Powered by Technology.",
+            "We Build Digital Products That Make Businesses Smarter",
+           ]} />
         </p>
 
         <div style={{
@@ -1153,7 +1271,7 @@ const NavItems = [
           justifyContent: "flex-start",
           alignSelf: "flex-start",
           animation: loaded ? "fade-up 0.9s 0.85s both" : "none",
-          marginTop:"115px"
+          marginTop: "115px"
         }}>
           <MagneticButton style={{
             background: "linear-gradient(135deg, #B3FF10 0%, #A0DB21 100%)",
@@ -1167,7 +1285,8 @@ const NavItems = [
             Start Verifying Free →
           </MagneticButton>
           <MagneticButton style={{
-            background: "transparent",
+            background: "linear-gradient(90deg,    transparent,    rgba(255, 255, 255, 0.8),    transparent  );",
+            backdropFilter: "blur(20px)",
             color: C.text,
             padding: "15px 36px",
             borderRadius: "100px",
@@ -1214,9 +1333,9 @@ const NavItems = [
           {/* FIX 8: can't call hooks (useReveal) inside .map() — inline it via a sub-component */}
           {[
             { val: 99, suffix: ".99%", label: "Uptime SLA" },
-            { val: 14, suffix: "ms",   label: "Avg proof latency" },
-            { val: 2,  suffix: "B+",   label: "Inferences verified" },
-            { val: 500,suffix: "+",    label: "Enterprise customers" },
+            { val: 14, suffix: "ms", label: "Avg proof latency" },
+            { val: 2, suffix: "B+", label: "Inferences verified" },
+            { val: 500, suffix: "+", label: "Enterprise customers" },
           ].map((s, i) => <StatItem key={i} {...s} index={i} />)}
         </div>
       </section>
@@ -1308,12 +1427,12 @@ const NavItems = [
           </h2>
         </div>
         <div className="grid-3" >
-          <FeatureCard darkMode={darkMode} icon="🔐" title="Zero-Knowledge Proofs"  body="Prove computation happened correctly without revealing model weights, user data, or business logic." delay={0} />
-          <FeatureCard darkMode={darkMode} icon="⚡" title="Sub-20ms Latency"       body="Hardware-accelerated proof generation runs in your existing inference stack with negligible overhead."  delay={100} />
-          <FeatureCard darkMode={darkMode} icon="🌐" title="Agentic AI Ready"       body="Verify multi-step agent chains, tool calls, and RAG retrievals — every hop attested and logged."         delay={200} />
-          <FeatureCard darkMode={darkMode} icon="📋" title="Compliance Autopilot"   body="Auto-generated audit trails for EU AI Act, SOC 2, HIPAA, and enterprise governance requirements."      delay={300} />
-          <FeatureCard darkMode={darkMode} icon="🛡️" title="TEE Enclaves"           body="Trusted Execution Environments guarantee your model runs in a hardware-isolated, attestable context."   delay={400} />
-          <FeatureCard darkMode={darkMode} icon="🔗" title="Chain of Custody"       body="Immutable ledger from training checkpoint to user output. Trace any decision back to its origin."       delay={500} />
+          <FeatureCard darkMode={darkMode} icon="🔐" title="Zero-Knowledge Proofs" body="Prove computation happened correctly without revealing model weights, user data, or business logic." delay={0} />
+          <FeatureCard darkMode={darkMode} icon="⚡" title="Sub-20ms Latency" body="Hardware-accelerated proof generation runs in your existing inference stack with negligible overhead." delay={100} />
+          <FeatureCard darkMode={darkMode} icon="🌐" title="Agentic AI Ready" body="Verify multi-step agent chains, tool calls, and RAG retrievals — every hop attested and logged." delay={200} />
+          <FeatureCard darkMode={darkMode} icon="📋" title="Compliance Autopilot" body="Auto-generated audit trails for EU AI Act, SOC 2, HIPAA, and enterprise governance requirements." delay={300} />
+          <FeatureCard darkMode={darkMode} icon="🛡️" title="TEE Enclaves" body="Trusted Execution Environments guarantee your model runs in a hardware-isolated, attestable context." delay={400} />
+          <FeatureCard darkMode={darkMode} icon="🔗" title="Chain of Custody" body="Immutable ledger from training checkpoint to user output. Trace any decision back to its origin." delay={500} />
         </div>
       </section>
 
@@ -1437,7 +1556,7 @@ const NavItems = [
             background: "transparent", color: C.text,
             padding: "18px 44px", borderRadius: "100px",
             fontSize: "16px", fontWeight: 600,
-            border: "1px solid rgba(248,250,252,0.15)",
+            border: `1px solid ${C.border}`,
           }}>
             View Documentation
           </MagneticButton>
@@ -1512,7 +1631,7 @@ function TestimonialCard({ quote, name, role, avatar, index }) {
         <div style={{
           width: "40px", height: "40px", borderRadius: "50%",
           background: "linear-gradient(135deg, rgba(160,219,33,0.3), rgba(14,165,233,0.2))",
-          border: "1px solid rgba(160,219,33,0.3)",
+          border: `1px solid rgba(160,219,33,0.3)`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: "12px", fontWeight: 700, color: "#A0DB21",
         }}>{avatar}</div>
