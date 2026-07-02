@@ -1,12 +1,18 @@
 import { useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import FeatureCard from './components/FeatureCard';
-import Logo from './assets/Hint_logo.svg';
+import LightLogo from './assets/images/Hint_light_logo.svg';
+import DarkLogo from './assets/images/Hint_dark_logo.svg';
 import icon from './assets/Loader.svg';
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 import ThemeToggle from "./components/ThemeToggle";
 import { Lensflare, LensflareElement } from "three/examples/jsm/objects/Lensflare.js";
+import Marquee from "./components/Marquee";
+import ContactForm from "./components/ContactForm";
+
+import ProcessCarousel from "./components/ProcessCarousel";
+
  const lerp = (a, b, t) => a + (b - a) * t;
 
 // const C = {
@@ -20,7 +26,33 @@ import { Lensflare, LensflareElement } from "three/examples/jsm/objects/Lensflar
 //   muted: "#d8d8d8",
 //   glass: "rgba(8,16,30,0.6)",
 // };
-
+const processData = [
+  {
+    quote: "Understanding your business, users, and objectives.",
+    name: "Discover",
+    process: "1"
+  },
+  {
+    quote: "Creating wireframes, UI concepts, and seamless user experiences.",
+    name: "Design",
+    process: "2"
+  },
+  {
+    quote: "Building fast, scalable, and responsive digital solutions.",
+    name: "Develop",
+    process: "3"
+  },
+  {
+    quote: "Testing, optimizing, and ensuring everything works flawlessly.",
+    name: "Refine",
+    process: "4"
+  },
+  {
+    quote: "Launching your project and providing ongoing support for growth.",
+    name: "Deliver",
+    process: "5"
+  }
+];
 
 const themes = {
   dark: {
@@ -560,23 +592,23 @@ function MiniCanvas3D({ type }) {
     const camera = new THREE.PerspectiveCamera(50, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
     camera.position.z = 5;
 
-    const light = new THREE.PointLight(0x10b981, 60, 20);
+    const light = new THREE.PointLight(0xA0DB21, 60, 20);
     light.position.set(2, 3, 4);
-    scene.add(light, new THREE.AmbientLight(0x0a1628, 3));
+    scene.add(light, new THREE.AmbientLight(0xA0DB21, 3));
 
     let mesh, mesh2, raf, t = 0;
 
     if (type === "verify") {
       const geo = new THREE.TorusKnotGeometry(1.1, 0.3, 120, 16, 2, 3);
       const mat = new THREE.MeshPhysicalMaterial({
-        color: 0x064e3b, metalness: 0.95, roughness: 0.08,
-        emissive: 0x10b981, emissiveIntensity: 0.3,
+        color: 0x5d8310, metalness: 0.95, roughness: 0.08,
+        emissive: 0x5d8310, emissiveIntensity: 0.3,
       });
       mesh = new THREE.Mesh(geo, mat);
       scene.add(mesh);
       const wireGeo = new THREE.TorusKnotGeometry(1.12, 0.305, 80, 12, 2, 3);
       mesh2 = new THREE.Mesh(wireGeo, new THREE.MeshBasicMaterial({
-        color: 0x34d399, wireframe: true, transparent: true, opacity: 0.12
+        color: 0x5d8310, wireframe: true, transparent: true, opacity: 0.12
       }));
       scene.add(mesh2);
 
@@ -584,14 +616,14 @@ function MiniCanvas3D({ type }) {
       mesh = new THREE.Mesh(
         new THREE.IcosahedronGeometry(1.5, 2),
         new THREE.MeshPhysicalMaterial({
-          color: 0x050d1a, metalness: 0.8, roughness: 0.2,
-          emissive: 0x0ea5e9, emissiveIntensity: 0.2,
+          color: 0x5d8310, metalness: 0.8, roughness: 0.2,
+          emissive: 0x5d8310, emissiveIntensity: 0.2,
         })
       );
       scene.add(mesh);
       mesh2 = new THREE.Mesh(
         new THREE.IcosahedronGeometry(1.52, 2),
-        new THREE.MeshBasicMaterial({ color: 0x0ea5e9, wireframe: true, transparent: true, opacity: 0.35 })
+        new THREE.MeshBasicMaterial({ color: 0xA0DB21, wireframe: true, transparent: true, opacity: 0.35 })
       );
       scene.add(mesh2);
 
@@ -740,7 +772,7 @@ function Typewriter({ strings, speed = 55 }) {
   }, [charIdx, deleting, idx, strings, speed]);
 
   return (
-    <span>
+    <span style={{fontFamily:"Consolas, Monaco, 'Courier New', monospace; !important"}}>
       {display}
       <span style={{
         display: "inline-block", width: "2px", height: "1em",
@@ -796,8 +828,9 @@ function GlassPanel({ children, height = "420px", accentColor = "rgba(16,185,129
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(true);
+const currentYear = new Date().getFullYear();
 
-
+const Logo  = darkMode ?   LightLogo:DarkLogo;
   const canvasRef = useRef();
   useScene(canvasRef,darkMode);
   const C = darkMode ? themes.dark : themes.light;
@@ -927,9 +960,10 @@ export default function App() {
 
   const NavItems = [
     "Overview",
-    "Technology",
-    "Testimonies",
-    "Resources"
+    "About",
+    "Services",
+    "Why Us?",
+   
   ];
 
   return (
@@ -937,7 +971,7 @@ export default function App() {
       background: C.bg,
       minHeight: "100vh",
       color: C.text,
-      fontFamily: "'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif",
+      fontFamily: "Futura Md BT",
       overflowX: "hidden",
     }}>
 
@@ -997,7 +1031,7 @@ export default function App() {
           margin-bottom: 24px;
         }
         .gradient-text {
-          background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 50%, ${C.emerald} 100%);
+          background: linear-gradient(91deg, ${C.emerald} 0%,${C.text} 41%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -1178,7 +1212,10 @@ export default function App() {
                 fontSize: "clamp(13px,1vw,15px)",
               }}
             >
+            <a href={`#${item.replaceAll(' ', '').toLowerCase()}`} className="hover:text-[#A0DB21] transition">
+
               {item}
+              </a>
             </motion.span>
           ))}
         </motion.div>
@@ -1188,7 +1225,8 @@ export default function App() {
           style={{
             flexShrink: 0,
           }}
-        >
+        >          <a href={`#contact`} className="hover:text-[#040C02] transition">
+
           <MagneticButton
             style={{
               background:
@@ -1211,15 +1249,17 @@ export default function App() {
               whiteSpace: "nowrap",
             }}
           >
-            Get Started
-          </MagneticButton>
+                        Contact Us
+
+          
+          </MagneticButton></a>
         </div>
 
       </motion.nav>
 
 
       {/* ══ SECTION 1 — HERO ══ */}
-      <section style={{
+      <section id='overview' style={{
         position: "relative", zIndex: 2,
         minHeight: "100vh",
         display: "flex", flexDirection: "column",
@@ -1254,15 +1294,16 @@ export default function App() {
 
         <p style={{
           fontSize: "clamp(16px,2.5vw,22px)",
-          color: C.muted, fontWeight: 400,
-          lineHeight: 1.6, maxWidth: "620px",
+          color: '#fff', fontWeight: 400,
+          lineHeight: 1.6, maxWidth: "720px",
           marginBottom: "48px",
           animation: loaded ? "fade-up 0.9s 0.7s both" : "none",
+          fontFamily:"Consolas, Monaco, 'Courier New', monospace"
         }}>
           <Typewriter strings={[
-            "Your Next Big Idea Starts Here.",
-            "Human Intelligence. Powered by Technology.",
-            "We Build Digital Products That Make Businesses Smarter",
+           "your next big idea starts here.",
+"human intelligence. powered by technology.",
+"we build digital products that make businesses smarter.",
            ]} />
         </p>
 
@@ -1278,11 +1319,11 @@ export default function App() {
             color: "#040C02",
             padding: "15px 36px",
             borderRadius: "100px",
-            fontSize: "15px", fontWeight: 700,
+            fontSize: "15px", fontWeight:100,
             letterSpacing: "0.01em",
             boxShadow: "0 0 40px rgba(179,255,16,0.4), 0 0 80px rgba(160,219,33,0.15)",
           }}>
-            Start Verifying Free →
+            Start your projects →
           </MagneticButton>
           <MagneticButton style={{
             background: "linear-gradient(90deg,    transparent,    rgba(255, 255, 255, 0.8),    transparent  );",
@@ -1290,11 +1331,13 @@ export default function App() {
             color: C.text,
             padding: "15px 36px",
             borderRadius: "100px",
-            fontSize: "15px", fontWeight: 600,
+            fontSize: "15px", fontWeight: 100,
             border: "1px solid rgba(248,250,252,0.15)",
             backdropFilter: "blur(8px)",
           }}>
-            Watch the Demo
+          <a href="https://www.behance.net/ppahp" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: '#A0DB21' }}>
+            View Our works
+          </a>
           </MagneticButton>
         </div>
 
@@ -1315,7 +1358,7 @@ export default function App() {
       </section>
 
       {/* ══ SECTION 2 — STATS ══ */}
-      <section style={{
+      {/* <section style={{
         position: "relative", zIndex: 2,
         padding: "80px clamp(20px,6vw,80px)",
         maxWidth: "1200px", margin: "0 auto",
@@ -1330,48 +1373,50 @@ export default function App() {
           gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: "40px", textAlign: "center",
         }}>
-          {/* FIX 8: can't call hooks (useReveal) inside .map() — inline it via a sub-component */}
-          {[
+           {[
             { val: 99, suffix: ".99%", label: "Uptime SLA" },
             { val: 14, suffix: "ms", label: "Avg proof latency" },
             { val: 2, suffix: "B+", label: "Inferences verified" },
             { val: 500, suffix: "+", label: "Enterprise customers" },
           ].map((s, i) => <StatItem key={i} {...s} index={i} />)}
         </div>
-      </section>
+      </section> */}
+
+
+     
 
       {/* ══ SECTION 3 — TECHNOLOGY ══ */}
-      <section style={{
+      <section id='about'  style={{
         position: "relative", zIndex: 2,
         padding: "80px clamp(20px,6vw,80px)",
         maxWidth: "1200px", margin: "40px auto",
-        background: "rgba(4,12,2,0.2)",
-        backdropFilter: "blur(30px) saturate(180%)",
+        background: "rgb(98 98 98 / 9%)",
+        backdropFilter: "blur(2px) saturate(100%)",
         WebkitBackdropFilter: "blur(0px) saturate(180%)",
         borderRadius: "32px",
         border: "1px solid rgba(255,255,255,0.05)",
       }}>
-        <div style={{
+        <div  style={{
           display: "grid", gridTemplateColumns: "1fr 1fr",
           gap: "80px", alignItems: "center",
         }}>
-          <div>
+          <div >
             <div className="section-eyebrow">
               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.emerald }} />
-              Core Technology
+              Who We Are
             </div>
             <h2 style={{
               fontSize: "clamp(36px,4.5vw,56px)", fontWeight: 800,
               letterSpacing: "-0.04em", lineHeight: 1.05, margin: "0 0 24px",
             }}>
-              <span className="gradient-text">Cryptographic</span><br />proof at<br />inference time
+              <span className="gradient-text">Your Technology</span><br />Partner for the<br />Digital Future
+
             </h2>
             <p style={{ color: C.muted, fontSize: "16px", lineHeight: 1.75, margin: "0 0 32px" }}>
-              Every AI call produces a tamper-evident receipt. Zero-knowledge proofs bind your
-              model version, inputs, outputs, and timestamps into a verifiable chain —
-              without exposing proprietary data.
+              Whether you're launching a startup, modernizing your business, or scaling an enterprise, we provide comprehensive solutions tailored to your goals.
+
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {[
                 "ZK-proof per inference in under 14ms",
                 "Hardware attestation via TEE enclaves",
@@ -1380,7 +1425,9 @@ export default function App() {
                 <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
                   <div style={{
                     width: "20px", height: "20px", borderRadius: "50%",
-                    background: "rgba(160,219,33,0.15)",
+                    background: "transparent",
+                              backdropFilter: "blur(1.5px) saturate(100%)",
+
                     border: "1px solid rgba(160,219,33,0.4)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     flexShrink: 0, marginTop: "2px",
@@ -1389,7 +1436,9 @@ export default function App() {
                   <span style={{ color: C.text, fontSize: "15px", lineHeight: 1.5 }}>{item}</span>
                 </div>
               ))}
-            </div>
+            </div> */}
+
+
           </div>
 
           {/* Liquid glass 3D panel */}
@@ -1409,9 +1458,9 @@ export default function App() {
           </GlassPanel>
         </div>
       </section>
-
+ <Marquee/>
       {/* ══ SECTION 4 — FEATURES GRID ══ */}
-      <section style={{
+      <section id='services' style={{
         position: "relative", zIndex: 2,
         padding: "80px clamp(20px,6vw,80px)",
         maxWidth: "1200px", margin: "0 auto",
@@ -1419,25 +1468,90 @@ export default function App() {
         <div style={{ textAlign: "center", marginBottom: "64px" }}>
           <div className="section-eyebrow" style={{ margin: "0 auto 24px" }}>
             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.emerald }} />
-            Full Stack Trust
+            Our Expertise
           </div>
           <h2 style={{ fontSize: "clamp(32px,4vw,52px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.1, margin: 0 }}>
-            Everything AI pipelines<br />
-            <span className="gradient-text">need to be trustworthy</span>
+Complete Digital Solutions.  
+<br />
+            <span className="gradient-text">One Trusted Partner.</span>
           </h2>
         </div>
         <div className="grid-3" >
-          <FeatureCard darkMode={darkMode} icon="🔐" title="Zero-Knowledge Proofs" body="Prove computation happened correctly without revealing model weights, user data, or business logic." delay={0} />
-          <FeatureCard darkMode={darkMode} icon="⚡" title="Sub-20ms Latency" body="Hardware-accelerated proof generation runs in your existing inference stack with negligible overhead." delay={100} />
-          <FeatureCard darkMode={darkMode} icon="🌐" title="Agentic AI Ready" body="Verify multi-step agent chains, tool calls, and RAG retrievals — every hop attested and logged." delay={200} />
-          <FeatureCard darkMode={darkMode} icon="📋" title="Compliance Autopilot" body="Auto-generated audit trails for EU AI Act, SOC 2, HIPAA, and enterprise governance requirements." delay={300} />
-          <FeatureCard darkMode={darkMode} icon="🛡️" title="TEE Enclaves" body="Trusted Execution Environments guarantee your model runs in a hardware-isolated, attestable context." delay={400} />
-          <FeatureCard darkMode={darkMode} icon="🔗" title="Chain of Custody" body="Immutable ledger from training checkpoint to user output. Trace any decision back to its origin." delay={500} />
-        </div>
+        <FeatureCard
+  darkMode={darkMode}
+  icon="🎨"
+  title="Design & Branding"
+  body="Crafting intuitive digital experiences and memorable brand identities."
+  delay={0}
+/>
+
+<FeatureCard
+  darkMode={darkMode}
+  icon="💻"
+  title="Web Development"
+  body="Building fast, responsive, and scalable websites for modern businesses."
+  delay={0.1}
+/>
+
+<FeatureCard
+  darkMode={darkMode}
+  icon="⚙️"
+  title="Software Development"
+  body="Developing custom software solutions tailored to your business needs."
+  delay={0.2}
+/>
+
+<FeatureCard
+  darkMode={darkMode}
+  icon="📱"
+  title="Mobile App Development"
+  body="Creating high-performance Android and iOS applications."
+  delay={0.3}
+/>
+
+<FeatureCard
+  darkMode={darkMode}
+  icon="☁️"
+  title="Cloud & DevOps"
+  body="Optimizing infrastructure with cloud solutions and automation."
+  delay={0.4}
+/>
+
+<FeatureCard
+  darkMode={darkMode}
+  icon="📢"
+  title="Digital Marketing"
+  body="Growing your brand through strategic digital marketing campaigns."
+  delay={0.5}
+/>
+
+<FeatureCard
+  darkMode={darkMode}
+  icon="🔒"
+  title="Digital Security"
+  body="Protecting digital assets with anti-piracy and security solutions."
+  delay={0.6}
+/>
+
+<FeatureCard
+  darkMode={darkMode}
+  icon="💡"
+  title="IT Consulting"
+  body="Providing expert technology guidance and digital transformation strategies."
+  delay={0.7}
+/>
+
+<FeatureCard
+  darkMode={darkMode}
+  icon="🛠️"
+  title="Maintenance & Support"
+  body="Ensuring your digital products remain secure, updated, and reliable."
+  delay={0.8}
+/> </div>
       </section>
 
       {/* ══ SECTION 5 — COMPUTE + AGENT ══ */}
-      <section style={{
+      <section id='whyus?' style={{
         position: "relative", zIndex: 2,
         padding: "80px clamp(20px,6vw,80px)",
         maxWidth: "1200px", margin: "0 auto",
@@ -1447,23 +1561,42 @@ export default function App() {
           <GlassPanel height="400px" accentColor="rgba(14,165,233,0.04)">
             <MiniCanvas3D type="compute" />
             <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(14,165,233,0.012) 2px, rgba(14,165,233,0.012) 4px)", pointerEvents: "none" }} />
-            <div style={{ position: "absolute", top: "16px", left: "16px", fontSize: "10px", fontFamily: "monospace", color: "rgba(14,165,233,0.6)", letterSpacing: "0.08em" }}>
-              VERIFIABLE COMPUTE LAYER
+            <div style={{ position: "absolute", top: "16px", left: "16px", fontSize: "10px", fontFamily: "monospace", color: "#A0DB21", letterSpacing: "0.08em" }}>
+              VERIFIABLE COMPUTE LAYER 
             </div>
           </GlassPanel>
           <div>
             <div className="section-eyebrow">
-              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#0ea5e9" }} />
-              Verifiable Compute
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#A0DB21" }} />
+              Why Hint
             </div>
             <h2 style={{ fontSize: "clamp(32px,4vw,48px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.1, margin: "0 0 24px" }}>
-              The infrastructure<br />layer AI was missing
-            </h2>
-            <p style={{ color: C.muted, fontSize: "15px", lineHeight: 1.75 }}>
-              HINT sits between your model provider and your application.
-              Every inference is routed through our attestation layer —
-              producing a cryptographic receipt in real-time, with zero changes to your existing code.
-            </p>
+           Why Businesses <br/> Choose Us
+
+             </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {[
+                "Human-Centered Innovation",
+                "End-to-End Expertise",
+                "Scalable Solutions",
+                "Quality Without Compromise",
+                "Security-First Approach"
+              ].map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                  <div style={{
+                    width: "20px", height: "20px", borderRadius: "50%",
+                    background: "transparent",
+                              backdropFilter: "blur(1.5px) saturate(100%)",
+
+                    border: "1px solid rgba(160,219,33,0.4)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0, marginTop: "2px",
+                    fontSize: "10px", color: C.emerald,
+                  }}>✓</div>
+                  <span style={{ color: C.text, fontSize: "15px", lineHeight: 1.5 }}>{item}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -1501,7 +1634,7 @@ export default function App() {
       </section>
 
       {/* ══ SECTION 6 — TESTIMONIALS ══ */}
-      <section style={{
+      {/* <section style={{
         position: "relative", zIndex: 2,
         padding: "80px clamp(20px,6vw,80px)",
         maxWidth: "1200px", margin: "0 auto",
@@ -1509,24 +1642,22 @@ export default function App() {
         <div style={{ textAlign: "center", marginBottom: "64px" }}>
           <div className="section-eyebrow" style={{ margin: "0 auto 24px" }}>
             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.emerald }} />
-            Testimonies
+            Our Process
           </div>
           <h2 style={{ fontSize: "clamp(32px,4vw,52px)", fontWeight: 800, letterSpacing: "-0.04em" }}>
-            Trusted by builders
+            Turning Ideas Into Digital Success
           </h2>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px" }}>
-          {/* FIX 9: same hook-in-map issue — use a sub-component */}
-          {[
-            { quote: "HINT is the primitive the AI industry has been missing. We now have a complete audit trail for every inference — regulators love it.", name: "Priya Nakamura", role: "CTO, Meridian Health AI", avatar: "PN" },
-            { quote: "We ship agentic products to financial institutions. Without HINT's attestation layer, we couldn't have closed our enterprise contracts.", name: "Marcus Osei", role: "CEO, Arbor Finance", avatar: "MO" },
-            { quote: "Integrating HINT took two hours. The ROI on avoided compliance work was immediate — it paid for a year in the first month.", name: "Yuki Tanaka", role: "Head of Infra, Nova Labs", avatar: "YT" },
-          ].map((t, i) => <TestimonialCard key={i} {...t} index={i} />)}
+        <div>
+           FIX 9: same hook-in-map issue — use a sub-component 
+          
+<ProcessCarousel  processData={processData} />
+
         </div>
-      </section>
+      </section> */}
 
       {/* ══ SECTION 7 — CTA ══ */}
-      <section style={{
+      <section id="contact" style={{
         position: "relative", zIndex: 2,
         padding: "120px clamp(20px,6vw,80px) 160px",
         textAlign: "center",
@@ -1538,12 +1669,13 @@ export default function App() {
           Get Started Today
         </div>
         <h2 style={{ fontSize: "clamp(40px,6vw,72px)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.05, margin: "0 0 24px" }}>
-          <span className="gradient-text">Verifiable AI</span><br />starts here.
+          <span className="gradient-text">Ready to Build
+</span><br /> Something Exceptional!
         </h2>
-        <p style={{ color: C.muted, fontSize: "18px", lineHeight: 1.7, maxWidth: "520px", margin: "0 auto 48px" }}>
+        {/* <p style={{ color: C.muted, fontSize: "18px", lineHeight: 1.7, maxWidth: "520px", margin: "0 auto 48px" }}>
           Join 500+ enterprises that already ship AI products with cryptographic auditability built in.
-        </p>
-        <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+        </p> */}
+        {/* <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
           <MagneticButton style={{
             background: "linear-gradient(135deg, #B3FF10 0%, #A0DB21 100%)",
             color: "#040C02", padding: "18px 44px", borderRadius: "100px",
@@ -1560,7 +1692,12 @@ export default function App() {
           }}>
             View Documentation
           </MagneticButton>
-        </div>
+        </div> */}
+
+<ContactForm/>
+
+
+
       </section>
 
       {/* ── FOOTER */}
@@ -1575,10 +1712,11 @@ export default function App() {
           <img src={Logo} alt="HINT" style={{ width: "100px", height: "auto" }} />
         </div>
         <div style={{ fontSize: "12px", color: C.muted }}>
-          © 2025 HINT Technologies. Verifiable Compute for the Agentic AI Era.
+          © {currentYear} <span style={{ color: C.emerald }}>H</span>int Technologies. <span style={{ color: C.emerald }}>Human</span> Intelligence. Powered by Technology.
+
         </div>
         <div style={{ display: "flex", gap: "24px" }}>
-          {["Privacy", "Terms", "Security"].map(l => (
+          {["Design", "Develop", "Secure", "Grow"].map(l => (
             <span key={l} className="nav-link" style={{ fontSize: "12px" }}>{l}</span>
           ))}
         </div>
@@ -1608,7 +1746,7 @@ function StatItem({ val, suffix, label, index }) {
   );
 }
 
-function TestimonialCard({ quote, name, role, avatar, index }) {
+function TestimonialCard({ quote, name, process, index }) {
   const [ref, vis] = useReveal();
   return (
     <div ref={ref} style={{
@@ -1623,23 +1761,25 @@ function TestimonialCard({ quote, name, role, avatar, index }) {
       transform: vis ? "none" : "translateY(32px)",
       transition: `all 0.7s ${index * 120}ms cubic-bezier(0.23,1,0.32,1)`,
     }}>
-      <div style={{ fontSize: "28px", color: "#A0DB21", marginBottom: "20px", lineHeight: 1 }}>"</div>
-      <p style={{ color: "#cbd5e1", fontSize: "15px", lineHeight: 1.7, margin: "0 0 28px", fontStyle: "italic" }}>
-        {quote}
-      </p>
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+ <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <div style={{
           width: "40px", height: "40px", borderRadius: "50%",
           background: "linear-gradient(135deg, rgba(160,219,33,0.3), rgba(14,165,233,0.2))",
           border: `1px solid rgba(160,219,33,0.3)`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: "12px", fontWeight: 700, color: "#A0DB21",
-        }}>{avatar}</div>
+        }}>{process}</div>
         <div>
           <div style={{ fontWeight: 600, fontSize: "14px", color: "#f8fafc" }}>{name}</div>
-          <div style={{ fontSize: "12px", color: "#64748b" }}>{role}</div>
-        </div>
+         </div>
       </div>
+
+
+      <div style={{ fontSize: "28px", color: "#A0DB21", marginBottom: "20px", lineHeight: 1 }}></div>
+      <p style={{ color: "#cbd5e1", fontSize: "15px", lineHeight: 1.7, margin: "0 0 28px", fontStyle: "italic" }}>
+        {quote}
+      </p>
+     
     </div>
   );
 }
