@@ -1601,7 +1601,7 @@ Complete Digital Solutions.
         </div>
 
         {/* Agentic */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }}>
+        {/* <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }}>
           <div>
             <div className="section-eyebrow">
               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.emerald }} />
@@ -1630,7 +1630,7 @@ Complete Digital Solutions.
               AGENT NETWORK GRAPH
             </div>
           </GlassPanel>
-        </div>
+        </div> */}
       </section>
 
       {/* ══ SECTION 6 — TESTIMONIALS ══ */}
