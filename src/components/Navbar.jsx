@@ -15,7 +15,7 @@ export default function Navbar({
   setDarkMode,
 }) {
 
-const [isMobile, setIsMobile] = useState(false);
+const [isMobile, setIsMobile] = useState(window.innerWidth <= 800);
 
 useEffect(() => {
   const handleResize = () => {
