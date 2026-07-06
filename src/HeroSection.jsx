@@ -10,7 +10,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import { Lensflare, LensflareElement } from "three/examples/jsm/objects/Lensflare.js";
 import Marquee from "./components/Marquee";
 import ContactForm from "./components/ContactForm";
-
+import Navbar from "./components/Navbar";
 import ProcessCarousel from "./components/ProcessCarousel";
 
  const lerp = (a, b, t) => a + (b - a) * t;
@@ -920,7 +920,7 @@ const Logo  = darkMode ?   LightLogo:DarkLogo;
   const navHeight = useTransform(
     scrollY,
     [0, 150],
-    [70, 60]
+    [70, 70]
   );
 
   const navBackground = useTransform(
@@ -975,15 +975,12 @@ const Logo  = darkMode ?   LightLogo:DarkLogo;
       overflowX: "hidden",
     }}>
 
-      <ThemeToggle
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-      />
+     
 
 
 
 
-
+{/* cursor glow */}
       <motion.div
         className="mouse-glow"
         animate={{ x: mousePos.x, y: mousePos.y }}
@@ -1118,144 +1115,18 @@ const Logo  = darkMode ?   LightLogo:DarkLogo;
       {/* ── NAVBAR */}
       {/* FIX 5: removed x:"-50%" (not valid MotionValue shorthand in all versions).
                 Use left+transform instead, or marginLeft auto trick */}
-      <motion.nav
-        style={{
-          position: "fixed",
-          top: navTop,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 100,
-
-          width: navWidth,
-          height: navHeight,
-          padding: navPadding,
-
-          borderRadius: navRadius,
-
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-evenly",
-
-          // Premium Glass Effect
-          background:
-            "linear-gradient(90deg, transparent, transparent)",
-
-          backdropFilter: "blur(1.5px) saturate(100%)",
-          WebkitBackdropFilter: "blur(5px) saturate(100%)",
-          //  transform:"rotate(25deg)",
-
-          animation: "shine 6s linear infinite",
-          border: "1px solid rgba(255,255,255,0.12)",
-
-          boxShadow: `
-      rgba(0, 0, 0, 0.1) 0px 0px 20px, rgba(255, 255, 255, 0.12) 0px 1px 0px inset, rgba(255, 255, 255, 0.03) 0px -1px 0px inset
-  `,
-
-          overflow: "hidden",
-
-          maxWidth: "1300px",
-        }}
-      >
-
-        {/* Logo */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            flexShrink: 0,
-          }}
-        >
-          <img
-            src={Logo}
-            alt="Logo"
-            style={{
-              width: "clamp(80px,10vw,110px)",
-              height: "auto",
-              display: "block",
-            }}
-          />
-        </div>
-
-        {/* Navigation */}
-        <motion.div
-          animate={{
-            // opacity: navScrolled ? 0 : 1,
-            // y: navScrolled ? -8 : 0,
-          }}
-          transition={{
-            duration: 0.25,
-          }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "clamp(12px,2vw,30px)",
-            flex: 1,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-          }}
-        >
-          {NavItems.map((item) => (
-            <motion.span
-              key={item}
-              whileHover={{
-                y: -2,
-                color: C.text,
-              }}
-              transition={{
-                duration: 0.2,
-              }}
-              style={{
-                cursor: "pointer",
-                fontWeight: 500,
-                fontSize: "clamp(13px,1vw,15px)",
-              }}
-            >
-            <a href={`#${item.replaceAll(' ', '').toLowerCase()}`} className="hover:text-[#A0DB21] transition">
-
-              {item}
-              </a>
-            </motion.span>
-          ))}
-        </motion.div>
-
-        {/* Button */}
-        <div
-          style={{
-            flexShrink: 0,
-          }}
-        >          <a href={`#contact`} className="hover:text-[#040C02] transition">
-
-          <MagneticButton
-            style={{
-              background:
-                "linear-gradient(135deg,#B3FF10 0%,#A0DB21 100%)",
-              color: "#040C02",
-
-              padding: "10px 22px",
-
-              borderRadius: "999px",
-
-              fontSize: "clamp(12px,1vw,14px)",
-
-              fontWeight: 700,
-
-              letterSpacing: ".02em",
-
-              boxShadow:
-                "0 0 20px rgba(160,219,33,.35)",
-
-              whiteSpace: "nowrap",
-            }}
-          >
-                        Contact Us
-
-          
-          </MagneticButton></a>
-        </div>
-
-      </motion.nav>
+      <Navbar
+  Logo={Logo}
+  C={C}
+  NavItems={NavItems}
+  navTop={navTop}
+  navWidth={navWidth}
+  navHeight={navHeight}
+  navPadding={navPadding}
+  navRadius={navRadius}
+  darkMode={darkMode}
+  setDarkMode={setDarkMode}
+/>
 
 
       {/* ══ SECTION 1 — HERO ══ */}
@@ -1386,78 +1257,135 @@ const Logo  = darkMode ?   LightLogo:DarkLogo;
      
 
       {/* ══ SECTION 3 — TECHNOLOGY ══ */}
-      <section id='about'  style={{
-        position: "relative", zIndex: 2,
-        padding: "80px clamp(20px,6vw,80px)",
-        maxWidth: "1200px", margin: "40px auto",
-        background: "rgb(98 98 98 / 9%)",
-        backdropFilter: "blur(2px) saturate(100%)",
-        WebkitBackdropFilter: "blur(0px) saturate(180%)",
-        borderRadius: "32px",
-        border: "1px solid rgba(255,255,255,0.05)",
-      }}>
-        <div  style={{
-          display: "grid", gridTemplateColumns: "1fr 1fr",
-          gap: "80px", alignItems: "center",
-        }}>
-          <div >
-            <div className="section-eyebrow">
-              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.emerald }} />
-              Who We Are
-            </div>
-            <h2 style={{
-              fontSize: "clamp(36px,4.5vw,56px)", fontWeight: 800,
-              letterSpacing: "-0.04em", lineHeight: 1.05, margin: "0 0 24px",
-            }}>
-              <span className="gradient-text">Your Technology</span><br />Partner for the<br />Digital Future
+ <section
+  id="about"
+  style={{
+    position: "relative",
+    zIndex: 2,
+    padding: "80px clamp(20px,6vw,80px)",
+    maxWidth: "1200px",
+    margin: "40px auto",
+    background: "rgb(98 98 98 / 9%)",
+    backdropFilter: "blur(2px) saturate(100%)",
+    WebkitBackdropFilter: "blur(0px) saturate(180%)",
+    borderRadius: "32px",
+    border: "1px solid rgba(255,255,255,0.05)",
+  }}
+>
+  <div
+    className="about-grid"
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
+      gap: "clamp(30px,5vw,80px)",
+      alignItems: "center",
+    }}
+  >
+    <div
+      style={{
+        width: "100%",
+      }}
+    >
+      <div className="section-eyebrow">
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: C.emerald,
+          }}
+        />
+        Who We Are
+      </div>
 
-            </h2>
-            <p style={{ color: C.muted, fontSize: "16px", lineHeight: 1.75, margin: "0 0 32px" }}>
-              Whether you're launching a startup, modernizing your business, or scaling an enterprise, we provide comprehensive solutions tailored to your goals.
+      <h2
+        style={{
+          fontSize: "clamp(30px,7vw,56px)",
+          fontWeight: 800,
+          letterSpacing: "-0.04em",
+          lineHeight: 1.1,
+          margin: "0 0 24px",
+        }}
+      >
+        <span className="gradient-text">Your Technology</span>
+        <br />
+        Partner for the
+        <br />
+        Digital Future
+      </h2>
 
-            </p>
-            {/* <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {[
-                "ZK-proof per inference in under 14ms",
-                "Hardware attestation via TEE enclaves",
-                "Immutable audit log — SOC 2 & EU AI Act ready",
-              ].map((item, i) => (
-                <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                  <div style={{
-                    width: "20px", height: "20px", borderRadius: "50%",
-                    background: "transparent",
-                              backdropFilter: "blur(1.5px) saturate(100%)",
+      <p
+        style={{
+          color: C.muted,
+          fontSize: "clamp(15px,3vw,16px)",
+          lineHeight: 1.8,
+          marginBottom: 32,
+          maxWidth: 550,
+        }}
+      >
+        Whether you're launching a startup, modernizing your business, or
+        scaling an enterprise, we provide comprehensive solutions tailored to
+        your goals.
+      </p>
+    </div>
 
-                    border: "1px solid rgba(160,219,33,0.4)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0, marginTop: "2px",
-                    fontSize: "10px", color: C.emerald,
-                  }}>✓</div>
-                  <span style={{ color: C.text, fontSize: "15px", lineHeight: 1.5 }}>{item}</span>
-                </div>
-              ))}
-            </div> */}
+    <div
+      style={{
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
+      <GlassPanel
+        height="420px"
+        style={{
+          width: "100%",
+          maxWidth: 500,
+        }}
+      >
+        <MiniCanvas3D type="verify" />
 
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(160,219,33,0.015) 2px, rgba(160,219,33,0.015) 4px)",
+            pointerEvents: "none",
+          }}
+        />
 
-          </div>
-
-          {/* Liquid glass 3D panel */}
-          <GlassPanel height="420px">
-            <MiniCanvas3D type="verify" />
-            <div style={{
-              position: "absolute", inset: 0,
-              background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(160,219,33,0.015) 2px, rgba(160,219,33,0.015) 4px)",
-              pointerEvents: "none",
-            }} />
-            <div style={{ position: "absolute", top: "16px", left: "16px", fontSize: "10px", fontFamily: "monospace", color: "rgba(160,219,33,0.6)", letterSpacing: "0.08em" }}>
-              ZK-PROOF ENGINE v2.4.1
-            </div>
-            <div style={{ position: "absolute", bottom: "16px", right: "16px", fontSize: "10px", fontFamily: "monospace", color: "rgba(160,219,33,0.4)", letterSpacing: "0.08em" }}>
-              ◉ LIVE
-            </div>
-          </GlassPanel>
+        <div
+          style={{
+            position: "absolute",
+            top: 16,
+            left: 16,
+            fontSize: 10,
+            fontFamily: "monospace",
+            color: "rgba(160,219,33,0.6)",
+            letterSpacing: "0.08em",
+          }}
+        >
+          ZK-PROOF ENGINE v2.4.1
         </div>
-      </section>
+
+        <div
+          style={{
+            position: "absolute",
+            bottom: 16,
+            right: 16,
+            fontSize: 10,
+            fontFamily: "monospace",
+            color: "rgba(160,219,33,0.4)",
+            letterSpacing: "0.08em",
+          }}
+        >
+          ◉ LIVE
+        </div>
+      </GlassPanel>
+    </div>
+  </div>
+</section>
  <Marquee/>
       {/* ══ SECTION 4 — FEATURES GRID ══ */}
       <section id='services' style={{
@@ -1557,14 +1485,12 @@ Complete Digital Solutions.
         maxWidth: "1200px", margin: "0 auto",
       }}>
         {/* Verifiable Compute */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center", marginBottom: "120px" }}>
-          <GlassPanel height="400px" accentColor="rgba(14,165,233,0.04)">
-            <MiniCanvas3D type="compute" />
-            <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(14,165,233,0.012) 2px, rgba(14,165,233,0.012) 4px)", pointerEvents: "none" }} />
-            <div style={{ position: "absolute", top: "16px", left: "16px", fontSize: "10px", fontFamily: "monospace", color: "#A0DB21", letterSpacing: "0.08em" }}>
-              VERIFIABLE COMPUTE LAYER 
-            </div>
-          </GlassPanel>
+        <div style={{  display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+    gap: "clamp(30px,5vw,80px)",
+    alignItems: "center",
+    marginBottom: "clamp(60px,8vw,120px)", }}>
+       
           <div>
             <div className="section-eyebrow">
               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#A0DB21" }} />
@@ -1598,6 +1524,14 @@ Complete Digital Solutions.
               ))}
             </div>
           </div>
+
+             <GlassPanel height="400px" accentColor="rgba(14,165,233,0.04)">
+            <MiniCanvas3D type="compute" />
+            <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(14,165,233,0.012) 2px, rgba(14,165,233,0.012) 4px)", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", top: "16px", left: "16px", fontSize: "10px", fontFamily: "monospace", color: "#A0DB21", letterSpacing: "0.08em" }}>
+              VERIFIABLE COMPUTE LAYER 
+            </div>
+          </GlassPanel>
         </div>
 
         {/* Agentic */}

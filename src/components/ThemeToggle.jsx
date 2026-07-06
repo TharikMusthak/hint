@@ -1,63 +1,44 @@
 import { Sun, Moon } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function ThemeToggle({ darkMode, setDarkMode }) {
   return (
-    <>
-      <style>{`
-        .track {
-          transition: all 0.25s ease;
-        }
-
-        .knob {
-          transition: transform 0.25s ease, background 0.25s ease;
-        }
-      `}</style>
-
-      <button
-        onClick={() => setDarkMode(!darkMode)}
-        aria-label="Toggle theme"
-        className={`
-          fixed top-6 right-6 z-[9999]
-          w-[75px] h-[37px]
-          rounded-full
-          flex items-center
-          px-[4px]
-          track
-          shadow-md
-          border
-          ${
-            darkMode
-              ? "bg-transparent border-gray-700"
-              : "bg-transparentborder-gray-300"
-          }
-        `}
-      >
-        {/* LEFT ICON (moon) */}
-        <span className="absolute left-3 text-[10px]">
-          <Moon size={20} />
-        </span>
-
-        {/* RIGHT ICON (sun) */}
-        <span className="absolute right-3 text-[10px]">
-          <Sun size={20} />
-        </span>
-
-        {/* KNOB */}
-        <div
-          className={`
-            w-[28px] h-[28px]
-            rounded-full
-            shadow-sm
-            knob
-            flex items-center justify-center
-            ${
-              darkMode
-                ? "translate-x-[36px] bg-gray-800"
-                : "translate-x-0 bg-gray-300"
-            }
-          `}
-        />
-      </button>
-    </>
+    <button
+      onClick={() => setDarkMode(!darkMode)}
+      aria-label="Toggle theme"
+      className="fixed top-6 mr-[100px] z-[9999] p-0 bg-transparent border-none outline-none cursor-pointer"
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        {darkMode ? (
+          <motion.div
+            key="moon"
+            initial={{ rotate: -90, scale: 0.5, opacity: 0 }}
+            animate={{ rotate: 0, scale: 1, opacity: 1 }}
+            exit={{ rotate: 90, scale: 0.5, opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeInOut" }}
+          >
+            <Moon
+              size={24}
+              strokeWidth={2}
+              className="text-white hover:scale-110 transition-transform"
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="sun"
+            initial={{ rotate: 90, scale: 0.5, opacity: 0 }}
+            animate={{ rotate: 0, scale: 1, opacity: 1 }}
+            exit={{ rotate: -90, scale: 0.5, opacity: 0 }}
+            transition={{ duration: 0.55, ease: "easeInOut" }}
+          >
+            <Sun
+              size={24}
+              strokeWidth={2}
+              className="text-black hover:scale-110 transition-transform"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </button>
   );
 }
