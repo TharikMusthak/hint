@@ -279,7 +279,7 @@ return (
               top: 100,
               left: "0%",
               transform: "translateX(-50%)",
-              width: "92%",
+              width: "100%",
                  background:
             "linear-gradient(90deg, transparent, transparent)",
 
