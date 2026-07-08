@@ -38,7 +38,7 @@ const COLORS = {
   error:"#FF607A"
 };
 
-export default function ContactForm({ accent = COLORS.primary, onSuccess, prefillService }) {
+export default function ContactForm({ accent = COLORS.primary, onSuccess, prefillService ,theme,C}) {
   const [step, setStep] = useState(0);
   const [vals, setVals] = useState({
     name: '',
@@ -111,7 +111,7 @@ function MagneticButton({ children, onClick, style = {} }) {
     width: '100%',
     background: 'transparent',
     border: `1px solid ${COLORS.border}`,
-    color: COLORS.text,
+    color: C.text,
     padding: '14px 16px',
     borderRadius: '12px',
     fontSize: '0.93rem',

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
  import { useRef, useEffect, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
-
+import GlassSurface from "./GlassSurface/GlassSurface";
 export default function Navbar({
   Logo,
   C,
@@ -16,7 +16,9 @@ export default function Navbar({
 }) {
 
 const [isMobile, setIsMobile] = useState(window.innerWidth <= 800);
-
+ console.log("  navWidth",  navWidth.current
+);
+ 
 useEffect(() => {
   const handleResize = () => {
     setIsMobile(window.innerWidth <= 800);
@@ -64,6 +66,9 @@ function MagneticButton({ children, onClick, style = {} }) {
 
 return (
   <>
+
+
+
     {!isMobile ? (
       // =======================
       // YOUR EXISTING DESKTOP NAVBAR
@@ -72,43 +77,50 @@ return (
       // =======================
 
 <div>
-
+ 
+   
  
       
-       <motion.nav
-      style={{
+       <GlassSurface 
+  width={navWidth.current} 
+  height={navHeight.current}
+
+  borderRadius={999}
+   displace={0.5}
+  distortionScale={2}
+  redOffset={-44}
+  greenOffset={-44}
+  blueOffset={-43}
+  brightness={50}
+  opacity={1}
+   mixBlendMode="screen"
+  // borderRadius={navRadius.current}
+
+   style={{ 
         position: "fixed",
-        top: navTop,
+        top: navTop.current,
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 100,
-
-        width: navWidth,
-        height: navHeight,
-        padding: navPadding,
-
-        borderRadius: navRadius,
+borderradius: "999px",
+      
+        padding: navPadding.current,
+ 
 
         display: "flex",
         alignItems: "center",
         justifyContent: "space-evenly",
 
-         background:
-            "linear-gradient(90deg, transparent, transparent)",
-
-          backdropFilter: "blur(1.5px) saturate(100%)",
-          WebkitBackdropFilter: "blur(5px) saturate(100%)",
-        border: "1px solid rgba(255,255,255,0.12)",
-
-        boxShadow:
-          "rgba(0,0,0,.1) 0 0 20px, rgba(255,255,255,.12) 0 1px 0 inset, rgba(255,255,255,.03) 0 -1px 0 inset",
+      
+        // boxShadow:
+        //   "rgba(0,0,0,.1) 0 0 20px, rgba(255,255,255,.12) 0 1px 0 inset, rgba(255,255,255,.03) 0 -1px 0 inset",
 
         overflow: "hidden",
 
         maxWidth: "1300px",
       }}
     >
-    
+ 
       {/* Logo */}
       <div
         style={{
@@ -179,7 +191,10 @@ return (
           Contact Us
         </MagneticButton>
       </a>
-    </motion.nav>
+   
+  </GlassSurface>
+ 
+
 
     </div>
     ) : (
@@ -329,6 +344,7 @@ return (
         )}
       </>
     )}
-  </>
+
+   </>
 );
 }

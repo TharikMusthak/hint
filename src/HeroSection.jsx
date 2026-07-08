@@ -12,8 +12,9 @@ import Marquee from "./components/Marquee";
 import ContactForm from "./components/ContactForm";
 import Navbar from "./components/Navbar";
 import ProcessCarousel from "./components/ProcessCarousel";
-
- const lerp = (a, b, t) => a + (b - a) * t;
+import SplashCursor from "./components/SplashCursor";
+import GlassSurface from "./components/GlassSurface/GlassSurface";
+  const lerp = (a, b, t) => a + (b - a) * t;
 
 // const C = {
 //   emerald: "#A0DB21",
@@ -974,18 +975,25 @@ const Logo  = darkMode ?   LightLogo:DarkLogo;
       fontFamily: "Futura Md BT",
       overflowX: "hidden",
     }}>
+<SplashCursor
+  DENSITY_DISSIPATION={3.5}
+  VELOCITY_DISSIPATION={2}
+  PRESSURE={0.1}
+  CURL={3}
+  SPLAT_RADIUS={0.2}
+  SPLAT_FORCE={6000}
+  COLOR_UPDATE_SPEED={10}
+  SHADING
+  RAINBOW_MODE={false}
+  COLOR="#A0DB21"
+/>
 
-     
 
-
-
-
-{/* cursor glow */}
-      <motion.div
+       {/* <motion.div
         className="mouse-glow"
         animate={{ x: mousePos.x, y: mousePos.y }}
         transition={{ type: "spring", damping: 20, stiffness: 500, mass: 0.10 }}
-      />
+      /> */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; }
@@ -1115,7 +1123,9 @@ const Logo  = darkMode ?   LightLogo:DarkLogo;
       {/* ── NAVBAR */}
       {/* FIX 5: removed x:"-50%" (not valid MotionValue shorthand in all versions).
                 Use left+transform instead, or marginLeft auto trick */}
-      <Navbar
+  
+ 
+    <Navbar
   Logo={Logo}
   C={C}
   NavItems={NavItems}
@@ -1127,6 +1137,13 @@ const Logo  = darkMode ?   LightLogo:DarkLogo;
   darkMode={darkMode}
   setDarkMode={setDarkMode}
 />
+ 
+
+    
+
+         
+
+  
 
 
       {/* ══ SECTION 1 — HERO ══ */}
@@ -1196,19 +1213,25 @@ const Logo  = darkMode ?   LightLogo:DarkLogo;
           }}>
             Start your projects →
           </MagneticButton>
-          <MagneticButton style={{
-            background: "linear-gradient(90deg,    transparent,    rgba(255, 255, 255, 0.8),    transparent  );",
-            backdropFilter: "blur(20px)",
-            color: C.text,
-            padding: "15px 36px",
-            borderRadius: "100px",
-            fontSize: "15px", fontWeight: 100,
-            border: "1px solid rgba(248,250,252,0.15)",
-            backdropFilter: "blur(8px)",
-          }}>
+
+          
+          <MagneticButton>
+           <GlassSurface 
+  
+
+  borderRadius={99}
+   displace={0.5}
+  distortionScale={180}
+  redOffset={-44}
+  greenOffset={-44}
+  blueOffset={-43}
+  brightness={50}
+  opacity={1}
+   mixBlendMode="screen"
+          >
           <a href="https://www.behance.net/ppahp" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", color: '#A0DB21' }}>
             View Our works
-          </a>
+          </a></GlassSurface>
           </MagneticButton>
         </div>
 
@@ -1272,6 +1295,8 @@ const Logo  = darkMode ?   LightLogo:DarkLogo;
     border: "1px solid rgba(255,255,255,0.05)",
   }}
 >
+
+
   <div
     className="about-grid"
     style={{
@@ -1385,6 +1410,10 @@ const Logo  = darkMode ?   LightLogo:DarkLogo;
       </GlassPanel>
     </div>
   </div>
+
+
+
+
 </section>
  <Marquee/>
       {/* ══ SECTION 4 — FEATURES GRID ══ */}
@@ -1628,7 +1657,7 @@ Complete Digital Solutions.
           </MagneticButton>
         </div> */}
 
-<ContactForm/>
+<ContactForm  theme={darkMode}   C={C}/>
 
 
 
