@@ -14,6 +14,10 @@ import Navbar from "./components/Navbar";
 import ProcessCarousel from "./components/ProcessCarousel";
 import SplashCursor from "./components/SplashCursor";
 import GlassSurface from "./components/GlassSurface/GlassSurface";
+import earthDayimg from "./assets/images/earth_day_cloud.jpg";
+import earthnightimg from "./assets/images/earth_night.png";
+
+
   const lerp = (a, b, t) => a + (b - a) * t;
 
 // const C = {
@@ -167,11 +171,14 @@ renderer.toneMappingExposure = darkMode ? 0.9 : 1.6;
 
  
 const earthDay = loader.load(
-  "https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg"
+ earthDayimg
 );
+// const earthDay1 = loader.load(
+//   "https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg"
+// );
 
 const earthNight = loader.load(
-  "https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_lights_2048.png"
+  earthnightimg
 );
     const heightMap = loader.load(
       "https://cdn.jsdelivr.net/gh/turban/webgl-earth/data/elev_bump_4k.jpg"
